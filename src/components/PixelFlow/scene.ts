@@ -1,6 +1,5 @@
-import { Pixel, COLORS } from './pixel';
+import { Pixel, COLORS, Stages } from './pixel';
 import { ProcessBox } from './process-box';
-import { Vector } from './vector';
 
 const PIXEL_SPEED = 2;
 const PIXEL_SPACING = 20;
@@ -38,6 +37,8 @@ export class Scene {
 
   draw() {
     const ctx = this.#canvas.getContext('2d');
+    if (!ctx) return;
+
     this.#frameCount += 1;
 
     // Clear the canvas
@@ -52,39 +53,25 @@ export class Scene {
 
     // Update and draw pixels
     this.#pixels = this.#pixels.filter(pixel => {
-      // Move pixel
-      const vector = Vector.between(pixel, pixel.target);
-
-      if (pixel.vector().isZero()) {
-        if (pixel.stage === 2) {
-          return false; // Remove pixel
+      // Reroute pixels that arrived at their target
+      if (pixel.didArrive()) {
+        switch (pixel.stage) {
+          case Stages.SINK:
+            return false; // Remove pixel
+          case Stages.SOURCE:
+            pixel.target = this.opForPixel(pixel).inputPosition();
+            pixel.stage = Stages.SHUFFLE;
+            break;
+          case Stages.SHUFFLE:
+            pixel.target = this.#finalBox.inputPosition();
+            pixel.stage = Stages.SINK;
+            break;
         }
-        // Set new targets based on color and stage
-        if (pixel.stage === 0) {
-          const opBoxIndex = {
-            [COLORS.GREEN]: 0,
-            [COLORS.YELLOW]: 1,
-            [COLORS.RED]: 2,
-            [COLORS.BLUE]: 3
-          }[pixel.color] || 0;
-          
-          pixel.target.x = this.#opBoxes[opBoxIndex].x + 20;
-          pixel.target.y = this.#opBoxes[opBoxIndex].y;
-          pixel.stage = 1;
-        } else if (pixel.stage === 1) {
-          pixel.target.x = 370;
-          pixel.target.y = 510;
-          pixel.stage = 2;
-        }
-      } else {
-        const nextPosition = vector.moveTowards(pixel, pixel.speed);
-        pixel.x = nextPosition.x;
-        pixel.y = nextPosition.y;
       }
 
       // Draw pixel
+      pixel.move();
       pixel.draw(ctx);
-
       return true;
     });
 
@@ -93,14 +80,27 @@ export class Scene {
     }
   }
   
+  // Spawn pixels above headed to sr boxes.
   public spawnPixels() {
     for (let i = 0; i < 4; i++) {
       this.#pixels.push(new Pixel(
-        this.#opBoxes[i].getCenter().x,
+        this.#opBoxes[i].inputPosition().x,
         -10,
         PIXEL_SPEED,
-        this.#srBoxes[i].getCenter()
+        this.#srBoxes[i].inputPosition()
       ));
     }
+  }
+  
+  // Choose the op box that corresponds to the pixel's color.
+  public opForPixel(pixel: Pixel): ProcessBox {
+    const opBoxIndex = {
+      [COLORS.GREEN]: 0,
+      [COLORS.YELLOW]: 1,
+      [COLORS.RED]: 2,
+      [COLORS.BLUE]: 3
+    }[pixel.color] || 0;
+    
+    return this.#opBoxes[opBoxIndex];
   }
 }

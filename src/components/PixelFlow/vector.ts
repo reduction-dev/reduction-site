@@ -20,8 +20,4 @@ export class Vector {
       y: position.y + (this.y / distance) * speed
     };
   }
-
-  isZero(): boolean {
-    return this.magnitude() < 2;
-  }
 }

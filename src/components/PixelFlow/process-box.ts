@@ -7,7 +7,7 @@ export class ProcessBox {
     public size: number
   ) {}
 
-  getCenter(): Position {
+  inputPosition(): Position {
     return { x: this.x + this.size/2, y: this.y };
   }
 

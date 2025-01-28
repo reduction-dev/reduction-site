@@ -12,13 +12,21 @@ export const COLORS = {
   BLUE: '#60a5fa'
 };
 
+export const Stages = {
+  SOURCE: 0,
+  SHUFFLE: 1,
+  SINK: 2
+} as const;
+
+export type Stage = typeof Stages[keyof typeof Stages];
+
 export class Pixel {
   x: number;
   y: number;
   color: string;
   id: number;
   speed: number;
-  stage: number;
+  stage: Stage;
   target: Position;
 
   constructor(x: number, y: number, speed: number, target: Position) { 
@@ -43,5 +51,15 @@ export class Pixel {
 
   public vector(): Vector {
     return Vector.between({ x: this.x, y: this.y }, this.target);
+  }
+
+  public didArrive(): boolean {
+    return this.vector().magnitude() < this.speed;
+  }
+
+  public move(): void {
+    const nextPosition = this.vector().moveTowards(this, this.speed);
+    this.x = nextPosition.x;
+    this.y = nextPosition.y;
   }
 }
