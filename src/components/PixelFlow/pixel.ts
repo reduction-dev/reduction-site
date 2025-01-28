@@ -1,3 +1,4 @@
+import { ProcessBox } from "./process-box";
 import { Vector } from "./vector";
 
 export interface Position {
@@ -27,11 +28,11 @@ export class Pixel {
   id: number;
   speed: number;
   stage: Stage;
-  target: Position;
+  target: ProcessBox;
 
   private lastPosition?: Position;
 
-  constructor(x: number, y: number, speed: number, target: Position) { 
+  constructor(x: number, y: number, speed: number, target: ProcessBox) { 
     const colors = [COLORS.GREEN, COLORS.YELLOW, COLORS.RED, COLORS.BLUE];
     this.x = x;
     this.y = y;
@@ -72,7 +73,7 @@ export class Pixel {
   }
 
   public vector(): Vector {
-    return Vector.between({ x: this.x, y: this.y }, this.target);
+    return Vector.between({ x: this.x, y: this.y }, this.target.inputPosition());
   }
 
   public didArrive(): boolean {

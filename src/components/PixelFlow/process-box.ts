@@ -4,55 +4,64 @@ export interface ProcessBox {
   inputPosition(): Position;
   draw(ctx: CanvasRenderingContext2D): void;
   emit?(pixel: Pixel): boolean;
+  illuminate(): void;
+  decayIllumination(): void;
 }
 
-export class SrBox implements ProcessBox {
+class BaseBox implements ProcessBox {
+  protected illuminationLevel = 0;
+  
   constructor(
-    private x: number,
-    private y: number,
-    private size: number
+    protected position: Position,
+    protected size: number
   ) {}
 
   public inputPosition(): Position {
-    return { x: this.x, y: this.y };
+    return this.position;
   }
 
-  public draw(ctx: CanvasRenderingContext2D): void {
-    ctx.strokeStyle = '#666';
+  protected drawGlowingBox(ctx: CanvasRenderingContext2D): void {
+    if (this.illuminationLevel <= 0) return;
+
+    ctx.save();
+    ctx.strokeStyle = `rgba(255, 255, 255, ${this.illuminationLevel * 1})`;
+    ctx.shadowColor = `rgba(255, 255, 255, ${this.illuminationLevel * 0.4})`;
+    ctx.shadowBlur = 12;
+    ctx.lineWidth = 1;
     ctx.strokeRect(
-      this.x - this.size/2,
-      this.y - this.size/2,
+      this.position.x - this.size/2,
+      this.position.y - this.size/2,
       this.size,
       this.size
     );
+    ctx.restore();
+  }
+
+  public draw(ctx: CanvasRenderingContext2D): void {
+    this.drawGlowingBox(ctx);
+  }
+
+  public illuminate(): void {
+    this.illuminationLevel += 0.25;
+    this.illuminationLevel = Math.min(2, this.illuminationLevel);
+  }
+
+  public decayIllumination(): void {
+    if (this.illuminationLevel > 0) {
+      this.illuminationLevel = Math.max(0, this.illuminationLevel * 0.85);
+    }
   }
 }
 
-export class OpBox implements ProcessBox {
+export class SrBox extends BaseBox {}
+
+export class OpBox extends BaseBox {
   private pixelCount = 0;
-
-  constructor(
-    private x: number,
-    private y: number,
-    private size: number
-  ) {}
-
-  public inputPosition(): Position {
-    return { x: this.x, y: this.y };
-  }
-
-  public draw(ctx: CanvasRenderingContext2D): void {
-    ctx.strokeStyle = '#666';
-    ctx.strokeRect(
-      this.x - this.size/2,
-      this.y - this.size/2,
-      this.size,
-      this.size
-    );
-  }
 
   public emit(pixel: Pixel): boolean {
     this.pixelCount++;
     return this.pixelCount % 4 === 0;
   }
 }
+
+export class SinkBox extends BaseBox {}
