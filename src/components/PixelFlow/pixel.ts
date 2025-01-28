@@ -45,7 +45,7 @@ export class Pixel {
     if (this.stage < 2) {
       ctx.fillRect(this.x - 2, this.y - 2, 4, 4);
     } else {
-      ctx.fillRect(this.x - 8, this.y - 8, 16, 16);
+      ctx.fillRect(this.x - 4, this.y - 4, 8, 8);
     }
   }
 

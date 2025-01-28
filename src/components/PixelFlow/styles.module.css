@@ -6,45 +6,6 @@
   overflow: hidden;
 }
 
-.box {
-  width: 40px;
-  height: 40px;
-  background: #444;
-  position: absolute;
-  border-radius: 4px;
-}
-
-.pixel {
-  width: 4px;
-  height: 4px;
-  position: absolute;
-  border-radius: 1px;
-}
-
-.largePixel {
-  width: 8px;
-  height: 8px;
-  position: absolute;
-  border-radius: 2px;
-}
-
-.stream {
-  position: absolute;
-  width: 40px;
-  height: 100%;
-}
-
-.finalBox {
-  width: 60px;
-  height: 60px;
-  background: #444;
-  position: absolute;
-  border-radius: 6px;
-  bottom: 40px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
 @keyframes pulse {
   0% { transform: scale(1); opacity: 1; }
   100% { transform: scale(2); opacity: 0; }

@@ -1,14 +1,14 @@
 import { Pixel, COLORS, Stages } from './pixel';
-import { ProcessBox } from './process-box';
+import { SrBox, OpBox } from './process-box';
 
-const PIXEL_SPEED = 2;
+const PIXEL_SPEED = 3;
 const PIXEL_SPACING = 20;
-const PIXEL_SPAWN_INTERVAL = PIXEL_SPACING / PIXEL_SPEED;
+const PIXEL_SPAWN_INTERVAL = Math.round(PIXEL_SPACING / PIXEL_SPEED);
 
 export class Scene {
-  #srBoxes: ProcessBox[];
-  #opBoxes: ProcessBox[];
-  #finalBox: ProcessBox;
+  #srBoxes: SrBox[];
+  #opBoxes: OpBox[];
+  #finalBox: SrBox;
   #pixels: Pixel[];
   #canvas: HTMLCanvasElement;
   #frameCount: number;
@@ -19,20 +19,20 @@ export class Scene {
     this.#frameCount = 0;
 
     this.#srBoxes = [
-      new ProcessBox(160, 240, 40),
-      new ProcessBox(280, 240, 40),
-      new ProcessBox(400, 240, 40),
-      new ProcessBox(520, 240, 40)
+      new SrBox(160, 140, 40),
+      new SrBox(280, 140, 40),
+      new SrBox(400, 140, 40),
+      new SrBox(520, 140, 40)
     ];
 
     this.#opBoxes = [
-      new ProcessBox(160, 360, 40),
-      new ProcessBox(280, 360, 40),
-      new ProcessBox(400, 360, 40),
-      new ProcessBox(520, 360, 40)
+      new OpBox(160, 260, 40),
+      new OpBox(280, 260, 40),
+      new OpBox(400, 260, 40),
+      new OpBox(520, 260, 40)
     ];
 
-    this.#finalBox = new ProcessBox(340, 480, 60);
+    this.#finalBox = new SrBox(340, 380, 60);
   }
 
   draw() {
@@ -63,9 +63,13 @@ export class Scene {
             pixel.stage = Stages.SHUFFLE;
             break;
           case Stages.SHUFFLE:
-            pixel.target = this.#finalBox.inputPosition();
-            pixel.stage = Stages.SINK;
-            break;
+            const op = this.opForPixel(pixel);
+            if (op.emit(pixel)) {
+              pixel.target = this.#finalBox.inputPosition();
+              pixel.stage = Stages.SINK;
+            } else {
+              return false;
+            }
         }
       }
 
@@ -93,7 +97,7 @@ export class Scene {
   }
   
   // Choose the op box that corresponds to the pixel's color.
-  public opForPixel(pixel: Pixel): ProcessBox {
+  public opForPixel(pixel: Pixel): OpBox {
     const opBoxIndex = {
       [COLORS.GREEN]: 0,
       [COLORS.YELLOW]: 1,

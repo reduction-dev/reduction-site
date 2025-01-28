@@ -1,18 +1,58 @@
-import { Position } from "./pixel";
+import { Pixel, Position } from './pixel';
 
-export class ProcessBox {
+export interface ProcessBox {
+  inputPosition(): Position;
+  draw(ctx: CanvasRenderingContext2D): void;
+  emit?(pixel: Pixel): boolean;
+}
+
+export class SrBox implements ProcessBox {
   constructor(
-    public x: number,
-    public y: number,
-    public size: number
+    private x: number,
+    private y: number,
+    private size: number
   ) {}
 
-  inputPosition(): Position {
-    return { x: this.x + this.size/2, y: this.y };
+  public inputPosition(): Position {
+    return { x: this.x, y: this.y };
   }
 
-  draw(ctx: CanvasRenderingContext2D): void {
-    ctx.fillStyle = '#444';
-    ctx.fillRect(this.x, this.y, this.size, this.size);
+  public draw(ctx: CanvasRenderingContext2D): void {
+    ctx.strokeStyle = '#666';
+    ctx.strokeRect(
+      this.x - this.size/2,
+      this.y - this.size/2,
+      this.size,
+      this.size
+    );
+  }
+}
+
+export class OpBox implements ProcessBox {
+  private pixelCount = 0;
+
+  constructor(
+    private x: number,
+    private y: number,
+    private size: number
+  ) {}
+
+  public inputPosition(): Position {
+    return { x: this.x, y: this.y };
+  }
+
+  public draw(ctx: CanvasRenderingContext2D): void {
+    ctx.strokeStyle = '#666';
+    ctx.strokeRect(
+      this.x - this.size/2,
+      this.y - this.size/2,
+      this.size,
+      this.size
+    );
+  }
+
+  public emit(pixel: Pixel): boolean {
+    this.pixelCount++;
+    return this.pixelCount % 4 === 0;
   }
 }
