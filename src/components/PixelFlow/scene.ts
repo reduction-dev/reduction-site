@@ -11,11 +11,16 @@ export class Scene {
   #opBoxes: OpBox[];
   #sinkBox: SinkBox;
   #pixels: Pixel[];
-  #canvas: HTMLCanvasElement;
+  #mainCanvas: HTMLCanvasElement;
+  #pixelCanvas: HTMLCanvasElement;
   #frameCount: number;
 
   constructor(canvas: HTMLCanvasElement) {
-    this.#canvas = canvas;
+    this.#mainCanvas = canvas;
+    this.#pixelCanvas = document.createElement("canvas");
+    this.#pixelCanvas.width = canvas.width;
+    this.#pixelCanvas.height = canvas.height;
+
     this.#pixels = [];
     this.#frameCount = 0;
 
@@ -36,14 +41,25 @@ export class Scene {
   }
 
   draw() {
-    const ctx = this.#canvas.getContext("2d");
-    if (!ctx) return;
+    const mainCtx = this.#mainCanvas.getContext("2d");
+    const pixelCtx = this.#pixelCanvas.getContext("2d");
+    if (!mainCtx || !pixelCtx) return;
 
     this.#frameCount += 1;
 
-    // Clear the canvas
-    ctx.fillStyle = "rgba(0, 0, 0, 0.05)"; // Adjust alpha (0.3) for longer/shorter trails
-    ctx.fillRect(0, 0, this.#canvas.width, this.#canvas.height);
+    // Clear the main canvas
+    mainCtx.clearRect(0, 0, this.#mainCanvas.width, this.#mainCanvas.height);
+
+    // Draw boxes on main canvas
+    [...this.#srBoxes, ...this.#opBoxes, this.#sinkBox].forEach((box) => {
+      box.draw(mainCtx)
+      box.decayIllumination();
+    });
+
+    // Apply fade effect when clearing the pixel canvas
+    pixelCtx.globalCompositeOperation = 'source-over';
+    pixelCtx.fillStyle = "rgba(0, 0, 0, 0.05)";
+    pixelCtx.fillRect(0, 0, this.#pixelCanvas.width, this.#pixelCanvas.height);
 
     // Update and draw pixels
     this.#pixels = this.#pixels.filter((pixel) => {
@@ -67,15 +83,14 @@ export class Scene {
 
       // Draw pixel
       pixel.move();
-      pixel.draw(ctx);
+      pixel.draw(pixelCtx);
       return true;
     });
 
-    // Draw boxes
-    [...this.#srBoxes, ...this.#opBoxes, this.#sinkBox].forEach((box) => {
-      box.draw(ctx)
-      box.decayIllumination();
-    });
+    // Composite pixel canvas on top with transparency
+    mainCtx.globalCompositeOperation = 'destination-over';
+    mainCtx.drawImage(this.#pixelCanvas, 0, 0);
+    mainCtx.globalCompositeOperation = 'source-over';
 
     if (this.#frameCount % PIXEL_SPAWN_INTERVAL === 0) {
       this.spawnPixels();
