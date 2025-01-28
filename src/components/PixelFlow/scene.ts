@@ -1,7 +1,7 @@
 import { Pixel, COLORS, Stages } from './pixel';
 import { SrBox, OpBox } from './process-box';
 
-const PIXEL_SPEED = 3;
+const PIXEL_SPEED = 4;
 const PIXEL_SPACING = 20;
 const PIXEL_SPAWN_INTERVAL = Math.round(PIXEL_SPACING / PIXEL_SPEED);
 
@@ -42,7 +42,8 @@ export class Scene {
     this.#frameCount += 1;
 
     // Clear the canvas
-    ctx.clearRect(0, 0, this.#canvas.width, this.#canvas.height);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.04)';  // Adjust alpha (0.3) for longer/shorter trails
+    ctx.fillRect(0, 0, this.#canvas.width, this.#canvas.height);
 
     // Draw boxes
     [

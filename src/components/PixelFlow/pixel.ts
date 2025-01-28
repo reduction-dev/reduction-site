@@ -29,6 +29,8 @@ export class Pixel {
   stage: Stage;
   target: Position;
 
+  private lastPosition?: Position;
+
   constructor(x: number, y: number, speed: number, target: Position) { 
     const colors = [COLORS.GREEN, COLORS.YELLOW, COLORS.RED, COLORS.BLUE];
     this.x = x;
@@ -42,11 +44,31 @@ export class Pixel {
 
   public draw(ctx: CanvasRenderingContext2D): void {
     ctx.fillStyle = this.color;
-    if (this.stage < 2) {
-      ctx.fillRect(this.x - 2, this.y - 2, 4, 4);
-    } else {
-      ctx.fillRect(this.x - 4, this.y - 4, 8, 8);
+
+    // Draw interpolated trail
+    if (this.lastPosition) {
+      const steps = Math.ceil(this.speed);
+      const points = this.interpolatePositions(this.lastPosition, this, steps);
+      
+      points.forEach((pos, i) => {
+        ctx.beginPath();
+        if (this.stage < 2) {
+          ctx.arc(pos.x, pos.y, 2, 0, Math.PI * 2);
+        } else {
+          ctx.arc(pos.x, pos.y, 4, 0, Math.PI * 2);
+        }
+        ctx.fill();
+      });
     }
+
+    // Draw current pixel
+    ctx.beginPath();
+    if (this.stage < 2) {
+      ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+    } else {
+      ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
+    }
+    ctx.fill();
   }
 
   public vector(): Vector {
@@ -58,8 +80,20 @@ export class Pixel {
   }
 
   public move(): void {
+    this.lastPosition = { x: this.x, y: this.y };
     const nextPosition = this.vector().moveTowards(this, this.speed);
     this.x = nextPosition.x;
     this.y = nextPosition.y;
+  }
+
+  private interpolatePositions(start: Position, end: Position, steps: number): Position[] {
+    const points: Position[] = [];
+    for (let i = 0; i <= steps; i++) {
+      points.push({
+        x: start.x + (end.x - start.x) * (i / steps),
+        y: start.y + (end.y - start.y) * (i / steps)
+      });
+    }
+    return points;
   }
 }
