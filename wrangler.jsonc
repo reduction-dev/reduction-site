@@ -1,0 +1,9 @@
+{
+  "name": "reduction-site",
+  "compatibility_date": "2025-01-29",
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "reduction-site",
+    "database_id": "9217aa06-4531-4b12-81c6-12a1c3f2bfb7"
+  }]
+}

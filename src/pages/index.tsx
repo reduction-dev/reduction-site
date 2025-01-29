@@ -2,10 +2,9 @@ import type {ReactNode} from 'react';
 import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
-import Heading from '@theme/Heading';
 
-import styles from './index.module.css';
 import PixelFlow from '../components/PixelFlow';
+import NewsletterSignUpForm from '../components/NewsletterSignUpForm';
 
 export default function Home(): ReactNode {
   const {siteConfig} = useDocusaurusContext();
@@ -27,20 +26,14 @@ export default function Home(): ReactNode {
           pipelines. If you can use a hash map then you can create a Reduction
           job to power realtime analytics.
         </p>
+        
         <div className="flex max-w-md mx-auto">
-          <input
-            type="email"
-            placeholder="Enter your email"
-            className="px-4 py-2 border flex-grow"
-          />
-          <button className="px-6 py-2 bg-blue-950 text-white hover:bg-blue-900">
-            Sign up for updates
-          </button>
+          <NewsletterSignUpForm />
         </div>
 
         <div className="mt-16 max-w-2xl mx-auto">
           <h2 className="text-2xl font-bold mb-8">Let's build your first Reduction job together</h2>
-          <form className="space-y-6 max-w-xlg">
+          <form className="space-y-6 max-w-xlg" onSubmit={(e) => e.preventDefault()}>
             <div>
               <label htmlFor="name" className="block text-base font-light mb-2">Name</label>
               <input

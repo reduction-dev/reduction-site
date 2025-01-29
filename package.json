@@ -7,7 +7,7 @@
     "start": "docusaurus start",
     "build": "docusaurus build",
     "swizzle": "docusaurus swizzle",
-    "deploy": "docusaurus deploy",
+    "deploy": "bun run build && wrangler pages deploy ./build",
     "clear": "docusaurus clear",
     "serve": "docusaurus serve",
     "write-translations": "docusaurus write-translations",
@@ -31,7 +31,8 @@
     "autoprefixer": "^10.4.20",
     "postcss": "^8.5.1",
     "tailwindcss": "^4.0.0",
-    "typescript": "~5.6.2"
+    "typescript": "~5.6.2",
+    "wrangler": "^3.106.0"
   },
   "browserslist": {
     "production": [
