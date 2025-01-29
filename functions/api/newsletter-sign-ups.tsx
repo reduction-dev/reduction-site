@@ -3,6 +3,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     formData = await context.request.formData();
   } catch (error) {
+    console.error('invalid form data', error);
     return Response.json(
       { success: false, error: "invalid form data" },
       { status: 400 }
@@ -20,7 +21,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // Normalize email for db query
   const email = rawEmail.trim().toLowerCase();
 
-  if (!/^\S+@\S+\.\S+$/.test(email)) {
+  if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 255) {
     return Response.json(
       { success: false, error: "invalid email" },
       { status: 422 }

@@ -5,6 +5,7 @@ import Layout from '@theme/Layout';
 
 import PixelFlow from '../components/PixelFlow';
 import NewsletterSignUpForm from '../components/NewsletterSignUpForm';
+import ContactForm from '../components/ContactForm';
 
 export default function Home(): ReactNode {
   const {siteConfig} = useDocusaurusContext();
@@ -32,55 +33,10 @@ export default function Home(): ReactNode {
         </div>
 
         <div className="mt-16 max-w-2xl mx-auto">
-          <h2 className="text-2xl font-bold mb-8">Let's build your first Reduction job together</h2>
-          <form className="space-y-6 max-w-xlg" onSubmit={(e) => e.preventDefault()}>
-            <div>
-              <label htmlFor="name" className="block text-base font-light mb-2">Name</label>
-              <input
-                type="text"
-                id="name"
-                className="w-full px-4 py-2 border"
-              />
-            </div>
-            <div>
-              <label htmlFor="company" className="block text-base font-light mb-2">Company</label>
-              <input
-                type="text"
-                id="company"
-                className="w-full px-4 py-2 border"
-              />
-            </div>
-            <div>
-              <label htmlFor="phone" className="block text-base font-light mb-2">Phone Number</label>
-              <input
-                type="tel"
-                id="phone"
-                className="w-full px-4 py-2 border"
-              />
-            </div>
-            <div>
-              <label htmlFor="email" className="block text-base font-light mb-2">Email</label>
-              <input
-                type="email"
-                id="email"
-                className="w-full px-4 py-2 border"
-              />
-            </div>
-            <div>
-              <label htmlFor="useCase" className="block text-base font-light mb-2">Use case</label>
-              <textarea
-                id="useCase"
-                rows={4}
-                className="w-full px-4 py-2 border" 
-              />
-            </div>
-            <button
-              type="submit"
-              className="px-6 py-2 bg-blue-950 text-white rounded-md hover:bg-blue-900"
-            >
-              Send
-            </button>
-          </form>
+          <h2 className="text-2xl font-bold mb-8">Let's build a Reduction job together</h2>
+          <div className="space-y-6 max-w-xlg">
+            <ContactForm />
+          </div>
         </div>
       </main>
     </Layout>

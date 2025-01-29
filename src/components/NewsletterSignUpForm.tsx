@@ -22,6 +22,7 @@ export default function NewsletterSignUpForm() {
 
       if (response.status >= 500) {
         setStatus('error');
+        return;
       }
       
       if (response.status >= 400) {
