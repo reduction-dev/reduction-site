@@ -8,6 +8,7 @@
     "build": "docusaurus build",
     "swizzle": "docusaurus swizzle",
     "deploy": "bun run build && wrangler pages deploy ./build",
+    "preview": "npm run build && wrangler pages dev ./build",
     "clear": "docusaurus clear",
     "serve": "docusaurus serve",
     "write-translations": "docusaurus write-translations",
