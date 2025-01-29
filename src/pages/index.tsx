@@ -14,11 +14,11 @@ export default function Home(): ReactNode {
       title={`Hello from ${siteConfig.title}`}
       description="Description will go into a meta tag in <head />">
       <div className="bg-black flex-row">
-        <div>
+        <div className="flex justify-center">
           <PixelFlow />
         </div>
         <div>
-          <p className="text-white text-2xl text-center pb-8">{siteConfig.tagline}</p>
+          <p className="text-white text-2xl text-center pt-2 px-4 pb-8">{siteConfig.tagline}</p>
         </div>
       </div>
       <main className="p-10 text-lg max-w-4xl mx-auto">

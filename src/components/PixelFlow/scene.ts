@@ -24,11 +24,16 @@ export class Scene {
     this.#pixels = [];
     this.#frameCount = 0;
 
+    // Calculate responsive spacing based on canvas width
+    const baseSpacing = Math.min(Math.max(canvas.width / 6, 80), 160);
+
     const layout = new Layout({
       width: canvas.width,
       height: canvas.height,
-      rowSpacing: 120,
-      columnSpacing: 120,
+      rowSpacing: baseSpacing,
+      columnSpacing: baseSpacing,
+      boxSize: 40,
+      edgePadding: 20,
     });
 
     const sinkPosition = layout.sinkPosition();
