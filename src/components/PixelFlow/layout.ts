@@ -11,7 +11,7 @@ export class Layout {
   private calculateRow(items: number, row: number): { x: number, y: number }[] {
     const totalWidth = (items - 1) * this.params.columnSpacing;
     const startX = (this.params.width - totalWidth) / 2;
-    const y = (row * this.params.rowSpacing) + this.params.rowSpacing;
+    const y = (row * this.params.rowSpacing) + (this.params.rowSpacing / 1.6);
 
     return Array.from({ length: items }, (_, i) => ({
       x: startX + (i * this.params.columnSpacing),
@@ -30,7 +30,7 @@ export class Layout {
   sinkPosition(): { x: number, y: number } {
     return {
       x: this.params.width / 2,
-      y: this.params.rowSpacing * 3
+      y: this.params.rowSpacing * 2 + (this.params.rowSpacing / 1.6)
     };
   }
 }

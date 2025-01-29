@@ -67,6 +67,14 @@ export class OpBox extends BaseBox {
 }
 
 export class SinkBox extends BaseBox {
+  private readonly baseAlpha = 0.3;
+
+  constructor(position: Position, size: number) {
+    super(position, size);
+    this.illuminationLevel = this.baseAlpha;
+    this.targetIllumination = this.baseAlpha;
+  }
+
   protected drawGlowingBox(ctx: CanvasRenderingContext2D): void {
     // Draw dark background
     ctx.fillStyle = 'rgb(0, 0, 0)';
@@ -90,7 +98,9 @@ export class SinkBox extends BaseBox {
     // Draw glow effect
     ctx.shadowColor = `rgba(255, 255, 255, ${this.illuminationLevel * 0.8})`;
     ctx.shadowBlur = 10;
-    ctx.fillStyle = `rgba(255, 255, 255, ${this.illuminationLevel})`;
+
+    const textAlpha = Math.max(this.baseAlpha, this.illuminationLevel);
+    ctx.fillStyle = `rgba(255, 255, 255, ${textAlpha})`;
     
     // Draw the text
     ctx.fillText('Reduction', this.position.x, this.position.y);
@@ -98,10 +108,14 @@ export class SinkBox extends BaseBox {
   }
 
   public illuminate(): void {
-    this.targetIllumination = Math.min(1, this.targetIllumination + 0.05);
+    if (this.targetIllumination <= this.baseAlpha) {
+      this.targetIllumination = this.baseAlpha + 0.05;
+    } else {
+      this.targetIllumination = Math.min(1, this.targetIllumination + 0.05);
+    }
   }
 
   public decayIllumination(): void {
-    this.targetIllumination = Math.max(0, this.targetIllumination * 0.995);
+    this.targetIllumination = Math.max(this.baseAlpha, this.targetIllumination * 0.995);
   }
 }

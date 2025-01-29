@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from 'react';
-import styles from './styles.module.css';
 import { Scene } from './scene';
 
 const PixelFlow: React.FC = () => {
@@ -9,13 +8,15 @@ const PixelFlow: React.FC = () => {
 
   useEffect(() => {
     if (canvasRef.current) {
-      canvasRef.current.width = 720;
-      canvasRef.current.height = 600;
+      canvasRef.current.width = 500;
+      canvasRef.current.height = 350;
       sceneRef.current = new Scene(canvasRef.current);
       const animate = () => {
         requestRef.current = requestAnimationFrame(() => {
-          sceneRef.current.draw();
-          animate();
+          if (sceneRef.current) {
+            sceneRef.current.draw();
+            animate();
+          }
         });
       }
       animate();
@@ -28,7 +29,7 @@ const PixelFlow: React.FC = () => {
   }, []);
 
   return (
-    <div className={styles.container}>
+    <div className="flex justify-center">
       <canvas ref={canvasRef} />
     </div>
   );

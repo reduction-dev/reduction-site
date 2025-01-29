@@ -2,7 +2,7 @@ import { Pixel, COLORS, Stages } from "./pixel";
 import { SrBox, OpBox, SinkBox } from "./process-box";
 import { Layout } from "./layout";
 
-const PIXEL_SPEED = 3;
+const PIXEL_SPEED = 2;
 const PIXEL_SPACING = 20;
 const PIXEL_SPAWN_INTERVAL = Math.round(PIXEL_SPACING / PIXEL_SPEED);
 

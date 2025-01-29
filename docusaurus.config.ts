@@ -68,11 +68,11 @@ const config: Config = {
     // Replace with your project's social card
     // image: 'img/docusaurus-social-card.jpg',
     navbar: {
-      title: 'My Site',
-      logo: {
-        alt: 'My Site Logo',
-        src: 'img/logo.svg',
-      },
+      title: 'Reduction',
+      // logo: {
+      //   alt: 'Reduction Logo',
+      //   src: 'img/logo.svg',
+      // },
       items: [
         {
           type: 'docSidebar',
@@ -90,12 +90,12 @@ const config: Config = {
     },
     footer: {
       style: 'dark',
-      links: [
-        {
-          label: 'Github',
-          to: 'http://github.com/reduction-dev/reduction',
-        },
-      ],
+      // links: [
+      //   {
+      //     label: 'Github',
+      //     to: 'http://github.com/reduction-dev/reduction',
+      //   },
+      // ],
       copyright: `Copyright © ${new Date().getFullYear()} Reduction`,
     },
     prism: {
@@ -103,6 +103,19 @@ const config: Config = {
       darkTheme: prismThemes.dracula,
     },
   } satisfies Preset.ThemeConfig,
+
+  plugins: [
+    async function tailwindPlugin(context, options) {
+      return {
+        name: 'docusaurus-tailwindcss',
+        configurePostCss(postcssOptions) {
+          postcssOptions.plugins.push(require('@tailwindcss/postcss'));
+          postcssOptions.plugins.push(require('autoprefixer'));
+          return postcssOptions;
+        },
+      };
+    },
+  ]
 };
 
 export default config;
