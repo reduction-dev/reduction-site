@@ -37,7 +37,7 @@ const PixelFlow: React.FC = () => {
   }, []);
 
   return (
-    <div ref={containerRef} className="overflow-hidden w-full max-w-[400px] aspect[4/3]">
+    <div ref={containerRef} className="overflow-hidden w-full max-w-[400px] aspect-4/3">
       <canvas ref={canvasRef} />
     </div>
   );
