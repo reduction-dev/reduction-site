@@ -1,5 +1,4 @@
-import { ProcessBox } from "./process-box";
-import { Vector } from "./vector";
+import { ProcessBox, SinkBox } from "./process-box";
 
 export interface Position {
   x: number;
@@ -66,19 +65,25 @@ export class Pixel {
     this.size = this.size * 1.33333;
   }
 
-  public vector(): Vector {
-    return Vector.between({ x: this.x, y: this.y }, this.target.inputPosition());
-  }
-
   public didArrive(): boolean {
-    return this.vector().magnitude() < this.speed;
+    const target = this.target.inputPosition();
+    const dx = target.x - this.x;
+    const dy = target.y - this.y;
+    const distance = Math.sqrt(dx**2 + dy**2);
+    return distance < this.speed;
   }
 
   public move(): void {
-    this.lastPosition = { x: this.x, y: this.y };
-    const nextPosition = this.vector().moveTowards(this, this.speed);
-    this.x = nextPosition.x;
-    this.y = nextPosition.y;
+    const targetPosition = this.target.inputPosition();
+    const dx = targetPosition.x - this.x;
+    const dy = targetPosition.y - this.y;
+    const distance = Math.sqrt(dx**2 + dy**2);
+    if (distance === 0) {
+      return;
+    }
+    
+    this.x += (dx / distance) * this.speed;
+    this.y += (dy / distance) * this.speed;
   }
 
   private interpolatePositions(start: Position, end: Position, steps: number): Position[] {
