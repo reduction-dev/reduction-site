@@ -19,28 +19,26 @@ export const Stages = {
   SINK: 2
 } as const;
 
-export type Stage = typeof Stages[keyof typeof Stages];
-
 export class Pixel {
   x: number;
   y: number;
   color: string;
   id: number;
   speed: number;
-  stage: Stage;
   target: ProcessBox;
+  size: number = 2;
 
   private lastPosition?: Position;
 
-  constructor(x: number, y: number, speed: number, target: ProcessBox) { 
+  constructor(x: number, y: number, speed: number, target: ProcessBox, scale: number) { 
     const colors = [COLORS.GREEN, COLORS.YELLOW, COLORS.RED, COLORS.BLUE];
     this.x = x;
     this.y = y;
     this.color = colors[Math.floor(Math.random() * colors.length)];
     this.id = Math.random();
-    this.speed = speed;
-    this.stage = 0;
+    this.speed = speed * scale;
     this.target = target;
+    this.size = 2 * scale;
   }
 
   public draw(ctx: CanvasRenderingContext2D): void {
@@ -53,23 +51,19 @@ export class Pixel {
       
       points.forEach((pos, i) => {
         ctx.beginPath();
-        if (this.stage < 2) {
-          ctx.arc(pos.x, pos.y, 2, 0, Math.PI * 2);
-        } else {
-          ctx.arc(pos.x, pos.y, 4, 0, Math.PI * 2);
-        }
+        ctx.arc(pos.x, pos.y, this.size, 0, Math.PI * 2);
         ctx.fill();
       });
     }
 
     // Draw current pixel
     ctx.beginPath();
-    if (this.stage < 2) {
-      ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
-    } else {
-      ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
-    }
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
     ctx.fill();
+  }
+
+  public grow(): void {
+    this.size = this.size * 1.33333;
   }
 
   public vector(): Vector {

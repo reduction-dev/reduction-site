@@ -68,11 +68,13 @@ export class OpBox extends BaseBox {
 
 export class SinkBox extends BaseBox {
   private readonly baseAlpha = 0.3;
+  private fontSize: number;
 
-  constructor(position: Position, size: number) {
+  constructor(position: Position, size: number, fontSize: number) {
     super(position, size);
     this.illuminationLevel = this.baseAlpha;
     this.targetIllumination = this.baseAlpha;
+    this.fontSize = fontSize;
   }
 
   protected drawGlowingBox(ctx: CanvasRenderingContext2D): void {
@@ -93,11 +95,11 @@ export class SinkBox extends BaseBox {
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = 'bold 48px monospace';
+    ctx.font = `bold ${this.fontSize}px monospace`;
     
     // Draw glow effect
     ctx.shadowColor = `rgba(255, 255, 255, ${this.illuminationLevel * 0.8})`;
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = this.fontSize / 5;
 
     const textAlpha = Math.max(this.baseAlpha, this.illuminationLevel);
     ctx.fillStyle = `rgba(255, 255, 255, ${textAlpha})`;

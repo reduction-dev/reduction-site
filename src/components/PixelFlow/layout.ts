@@ -7,8 +7,6 @@ export interface LayoutParams {
   edgePadding: number;
 }
 
-const EDGE_PADDING = 5
-
 export class Layout {
   #boxSize: number;
   #edgePadding: number;

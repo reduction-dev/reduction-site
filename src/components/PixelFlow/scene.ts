@@ -1,4 +1,4 @@
-import { Pixel, COLORS, Stages } from "./pixel";
+import { Pixel, COLORS } from "./pixel";
 import { SrBox, OpBox, SinkBox } from "./process-box";
 import { Layout } from "./layout";
 
@@ -11,49 +11,77 @@ export class Scene {
   #opBoxes: OpBox[];
   #sinkBox: SinkBox;
   #pixels: Pixel[];
-  #mainCanvas: HTMLCanvasElement;
-  #pixelCanvas: HTMLCanvasElement;
+  #mainCtx: CanvasRenderingContext2D | null; 
+  #pixelCtx: CanvasRenderingContext2D | null;
   #frameCount: number;
+  #scaleFactor: number
+  #canvasWidth: number;
+  #canvasHeight: number;
 
   constructor(canvas: HTMLCanvasElement) {
-    this.#mainCanvas = canvas;
-    this.#pixelCanvas = document.createElement("canvas");
-    this.#pixelCanvas.width = canvas.width;
-    this.#pixelCanvas.height = canvas.height;
+    this.#scaleFactor = window.devicePixelRatio || 1;
+    
+    // Get initial canvas dimensions
+    const htmlWidth = canvas.width;
+    const htmlHeight = canvas.height;
+
+    // Calculate scaled canvas dimensions
+    this.#canvasWidth = htmlWidth * this.#scaleFactor;
+    this.#canvasHeight = htmlHeight * this.#scaleFactor;
+    
+    // Possibly scale up the canvas dimensions
+    canvas.width = this.#canvasWidth
+    canvas.height = this.#canvasHeight
+    
+    // Reset display size to fit the original HTML element
+    canvas.style.width = `${htmlWidth}px`;
+    canvas.style.height = `${htmlHeight}px`;
+
+    this.#mainCtx = canvas.getContext("2d");
+
+    // Create pixel canvas
+    const pixelCanvas = document.createElement("canvas");
+    pixelCanvas.width = canvas.width;
+    pixelCanvas.height = canvas.height;
+    pixelCanvas.style.width = `${htmlWidth}px`;
+    pixelCanvas.style.height = `${htmlHeight}px`;
+    this.#pixelCtx = pixelCanvas.getContext("2d");
 
     this.#pixels = [];
     this.#frameCount = 0;
 
     // Calculate responsive spacing based on canvas width
-    const baseSpacing = Math.min(Math.max(canvas.width / 6, 80), 160);
+    const baseSpacing = Math.min(Math.max(canvas.width / 6, 80), 160) * this.#scaleFactor;
+
+    const boxSize = 38 * this.#scaleFactor;
 
     const layout = new Layout({
       width: canvas.width,
       height: canvas.height,
       rowSpacing: baseSpacing,
       columnSpacing: baseSpacing,
-      boxSize: 40,
-      edgePadding: 20,
+      boxSize: boxSize,
+      edgePadding: 20 * this.#scaleFactor,
     });
 
     const sinkPosition = layout.sinkPosition();
 
-    this.#srBoxes = layout.sourceRow().map((pos) => new SrBox(pos, 40));
+    this.#srBoxes = layout.sourceRow().map((pos) => new SrBox(pos, boxSize));
 
-    this.#opBoxes = layout.operatorRow().map((pos) => new OpBox(pos, 40));
+    this.#opBoxes = layout.operatorRow().map((pos) => new OpBox(pos, boxSize));
 
-    this.#sinkBox = new SinkBox(sinkPosition, 60);
+    this.#sinkBox = new SinkBox(sinkPosition, 60 * this.#scaleFactor, 48 * this.#scaleFactor);
   }
 
   draw() {
-    const mainCtx = this.#mainCanvas.getContext("2d");
-    const pixelCtx = this.#pixelCanvas.getContext("2d");
-    if (!mainCtx || !pixelCtx) return;
+    if (!this.#mainCtx || !this.#pixelCtx) return;
+    const mainCtx = this.#mainCtx;
+    const pixelCtx = this.#pixelCtx;
 
     this.#frameCount += 1;
 
     // Clear the main canvas
-    mainCtx.clearRect(0, 0, this.#mainCanvas.width, this.#mainCanvas.height);
+    mainCtx.clearRect(0, 0, this.#canvasWidth, this.#canvasHeight);
 
     // Draw boxes on main canvas
     [...this.#srBoxes, ...this.#opBoxes, this.#sinkBox].forEach((box) => {
@@ -63,8 +91,8 @@ export class Scene {
 
     // Apply fade effect when clearing the pixel canvas
     pixelCtx.globalCompositeOperation = 'source-over';
-    pixelCtx.fillStyle = "rgba(0, 0, 0, 0.05)";
-    pixelCtx.fillRect(0, 0, this.#pixelCanvas.width, this.#pixelCanvas.height);
+    pixelCtx.fillStyle = "rgba(0, 0, 0, 0.1)";
+    pixelCtx.fillRect(0, 0, this.#canvasWidth, this.#canvasHeight);
 
     // Update and draw pixels
     this.#pixels = this.#pixels.filter((pixel) => {
@@ -74,6 +102,7 @@ export class Scene {
           pixel.target.illuminate(); // illuminate the sr box
           pixel.target = this.opForPixel(pixel); // set new op target
         } else if (pixel.target instanceof OpBox) {
+          pixel.grow();
           pixel.target.illuminate(); // illuminate the op box
           if (pixel.target.emit(pixel)) {
             pixel.target = this.#sinkBox;
@@ -94,7 +123,7 @@ export class Scene {
 
     // Composite pixel canvas on top with transparency
     mainCtx.globalCompositeOperation = 'destination-over';
-    mainCtx.drawImage(this.#pixelCanvas, 0, 0);
+    mainCtx.drawImage(this.#pixelCtx.canvas, 0, 0);
     mainCtx.globalCompositeOperation = 'source-over';
 
     if (this.#frameCount % PIXEL_SPAWN_INTERVAL === 0) {
@@ -110,7 +139,8 @@ export class Scene {
           this.#opBoxes[i].inputPosition().x,
           -10,
           PIXEL_SPEED,
-          this.#srBoxes[i]
+          this.#srBoxes[i],
+          this.#scaleFactor
         )
       );
     }
