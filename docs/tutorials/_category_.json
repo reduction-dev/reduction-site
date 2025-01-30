@@ -1,0 +1,8 @@
+{
+  "label": "Tutorial",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "Learn Reduction by example. This section provides recipes and tutorials for common use cases."
+  }
+}
