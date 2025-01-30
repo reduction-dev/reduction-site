@@ -51,7 +51,7 @@ class BaseBox implements ProcessBox {
   }
 
   public decayIllumination(): void {
-    this.targetIllumination = Math.max(0, this.targetIllumination * 0.95);
+    this.targetIllumination = Math.max(0, this.targetIllumination * 0.97);
   }
 }
 
@@ -78,21 +78,22 @@ export class SinkBox extends BaseBox {
   }
 
   protected drawGlowingBox(ctx: CanvasRenderingContext2D): void {
-    // Draw dark background
-    ctx.fillStyle = 'rgb(0, 0, 0)';
+    ctx.save();
+    ctx.shadowColor = `rgba(0, 0, 0, 1)`;
+    ctx.shadowBlur = this.fontSize / 2;
+    ctx.fillStyle = 'rgba(0, 0, 0, 1)';
     ctx.beginPath();
     ctx.ellipse(
       this.position.x,
       this.position.y + (this.size/1.9),
       this.size * 1.5, // width radius
-      this.size * 0.8, // height radius
+      this.size * 0.75, // height radius
       0, // rotation
       0,
       Math.PI * 2
     );
     ctx.fill();
 
-    ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = `bold ${this.fontSize}px monospace`;
@@ -110,10 +111,11 @@ export class SinkBox extends BaseBox {
   }
 
   public illuminate(): void {
+    const increase = 0.07
     if (this.targetIllumination <= this.baseAlpha) {
-      this.targetIllumination = this.baseAlpha + 0.05;
+      this.targetIllumination = this.baseAlpha + increase;
     } else {
-      this.targetIllumination = Math.min(1, this.targetIllumination + 0.05);
+      this.targetIllumination = Math.min(1, this.targetIllumination + increase);
     }
   }
 

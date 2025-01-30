@@ -1,5 +1,4 @@
 import type {ReactNode} from 'react';
-import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 
@@ -21,14 +20,14 @@ export default function Home(): ReactNode {
           <p className="text-white text-2xl text-center pt-2 px-4 pb-8">{siteConfig.tagline}</p>
         </div>
       </div>
-      <main className="p-10 text-lg max-w-4xl mx-auto">
+      <main className="py-8 px-5 text-lg max-w-4xl mx-auto">
         <p className="text-lg pb-6 text-balance text-center">
           Reduction lets small teams of software engineers build stateful data
           pipelines. If you can use a hash map then you can create a Reduction
           job to power realtime analytics.
         </p>
         
-        <div className="flex max-w-md mx-auto">
+        <div className="flex justify-center">
           <NewsletterSignUpForm />
         </div>
 

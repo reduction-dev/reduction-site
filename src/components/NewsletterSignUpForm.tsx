@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import Button from './Button';
 
 export default function NewsletterSignUpForm() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -43,7 +44,7 @@ export default function NewsletterSignUpForm() {
 
   return (
     <div>
-      <form ref={formRef} onSubmit={handleSubmit}>
+      <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-5">
         <input
           type="email"
           name="email"
@@ -52,13 +53,9 @@ export default function NewsletterSignUpForm() {
           disabled={status === 'loading'}
           required
         />
-        <button 
-          type="submit" 
-          className="px-6 py-2 bg-blue-950 text-white hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={status === 'loading'}
-        >
+        <Button type="submit" disabled={status === 'loading'}>
           Sign up for updates
-        </button>
+        </Button>
       </form>
       {status === 'error' && <p className="text-red-700 pt-2">{error}</p>}
       {status === 'success' && <p className="text-green-700 pt-2">Thanks for signing up!</p>}

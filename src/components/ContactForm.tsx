@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import Button from './Button';
 
 export default function ContactForm() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -42,70 +43,68 @@ export default function ContactForm() {
   };
 
   return (
-    <form ref={formRef} className="space-y-6 max-w-xlg" onSubmit={handleSubmit}>
-      <div>
-        <label htmlFor="name" className="block text-base font-light mb-2">
-          Name <span className="text-red-700" title="required">*</span>
-        </label>
-        <input
-          type="text"
-          id="name"
-          name="name"
-          className="w-full px-4 py-2 border"
-          disabled={status === 'loading'}
-          required
-        />
-      </div>
-      <div>
-        <label htmlFor="company" className="block text-base font-light mb-2">Company</label>
-        <input
-          type="text"
-          id="company"
-          name="company"
-          className="w-full px-4 py-2 border"
-          disabled={status === 'loading'}
-        />
-      </div>
-      <div>
-        <label htmlFor="phone" className="block text-base font-light mb-2">Phone Number</label>
-        <input
-          type="tel"
-          id="phone"
-          name="phone"
-          className="w-full px-4 py-2 border"
-          disabled={status === 'loading'}
-        />
-      </div>
-      <div>
-        <label htmlFor="email" className="block text-base font-light mb-2">
-          Email <span className="text-red-700" title="required">*</span>
-        </label>
-        <input
-          type="email"
-          id="email"
-          name="email"
-          className="w-full px-4 py-2 border"
-          disabled={status === 'loading'}
-          required
-        />
-      </div>
-      <div>
-        <label htmlFor="useCase" className="block text-base font-light mb-2">Use case</label>
-        <textarea
-          id="useCase"
-          name="useCase"
-          rows={4}
-          className="w-full px-4 py-2 border"
-          disabled={status === 'loading'}
-        />
-      </div>
-      <button
-        type="submit"
-        className="px-6 py-2 bg-blue-950 text-white rounded-md hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
-        disabled={status === 'loading'}
-      >
+    <form ref={formRef} className="max-w-xlg space-y-5" onSubmit={handleSubmit}>
+      <fieldset className="space-y-6">
+        <div>
+          <label htmlFor="name" className="block text-base font-light mb-2">
+            Name <span className="text-red-700" title="required">*</span>
+          </label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            className="w-full px-4 py-2 border"
+            disabled={status === 'loading'}
+            required
+          />
+        </div>
+        <div>
+          <label htmlFor="company" className="block text-base font-light mb-2">Company</label>
+          <input
+            type="text"
+            id="company"
+            name="company"
+            className="w-full px-4 py-2 border"
+            disabled={status === 'loading'}
+          />
+        </div>
+        <div>
+          <label htmlFor="phone" className="block text-base font-light mb-2">Phone Number</label>
+          <input
+            type="tel"
+            id="phone"
+            name="phone"
+            className="w-full px-4 py-2 border"
+            disabled={status === 'loading'}
+          />
+        </div>
+        <div>
+          <label htmlFor="email" className="block text-base font-light mb-2">
+            Email <span className="text-red-700" title="required">*</span>
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            className="w-full px-4 py-2 border"
+            disabled={status === 'loading'}
+            required
+          />
+        </div>
+        <div>
+          <label htmlFor="useCase" className="block text-base font-light mb-2">Use case</label>
+          <textarea
+            id="useCase"
+            name="useCase"
+            rows={4}
+            className="w-full px-4 py-2 border block"
+            disabled={status === 'loading'}
+          />
+        </div>
+      </fieldset>
+      <Button type="submit" disabled={status === 'loading'} >
         Send
-      </button>
+      </Button>
       {status === 'error' && <p className="text-red-700">{error}</p>}
       {status === 'success' && <p className="text-green-700">Talk to you soon!</p>}
     </form>
