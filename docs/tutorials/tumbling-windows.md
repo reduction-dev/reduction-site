@@ -180,29 +180,27 @@ func (h *Handler) OnTimer(ctx context.Context, subject *rxn.Subject, timestamp t
 		return err
 	}
 
-	// Get the count for the minute then clear that minute
-	minute := timestamp.Truncate(time.Minute)
-	count, _ := state.Get(minute)
-	state.Delete(minute)
+	// Emit the sums for every earlier minute bucket
+	for minute, sum := range state.All() {
+		if ts.Before(timestamp) {
+			// Emit the count for the minute
+			h.Sink.Collect(ctx, SumEvent{
+				ChannelID: string(subject.Key()),
+				Timestamp: minute.Format(time.RFC3339),
+				Sum:       sum,
+			})
+			// Clean up the emitted minute entry
+			state.Delete(minute)
+		}
+	}
 
 	// Update the subject's state
 	subject.UpdateState(state)
-
-	// Emit the count for the minute
-	h.Sink.Collect(ctx, SumEvent{
-		ChannelID: string(subject.Key()),
-		Timestamp: timestamp.Format(time.RFC3339),
-		Sum:       count,
-	})
-
 	return nil
 }
 ```
 
 ## Testing
-
-:::danger[This section is all make-believe at this point]
-:::
 
 You may have spotted opportunities for unit test in our handler implementation
 but the most interesting parts of a Reduction job are how the callbacks and
@@ -210,7 +208,7 @@ state mutations work together to produce our final output. We can test how the
 handler will work with a production Reduction cluster by using the `rxn.TestRun`
 utility. This utility invokes the `reduction test` command with a list of test
 events to process with the handler. When all the events have been processed, we
-can inspect a fake sink to see what events we would have sent.
+can inspect an in-memory sink to see what events we would have sent.
 
 Our Handle's `Sink` member is an interface that allows us to collect our `SumEvent` 
 events (`rxn.Sink[SumEvent]`). When testing we can use Reduction's memory sink
@@ -229,10 +227,16 @@ We'll create a list of serialized `ViewEvents` to process.
 
 ```go
 events := []tumblingwindow.ViewEvent{
+	// Three events for the 1m bucket
   {ChannelID: "channel", Timestamp: "2025-01-01T00:01:00Z"},
   {ChannelID: "channel", Timestamp: "2025-01-01T00:01:30Z"},
   {ChannelID: "channel", Timestamp: "2025-01-01T00:01:59Z"},
+
+	// One event for the 2m bucket
   {ChannelID: "channel", Timestamp: "2025-01-01T00:02:10Z"},
+
+	// Event with timestamp that pushes watermark past the 2m window end
+  {ChannelID: "channel", Timestamp: "2025-01-01T00:03:01Z"},
 }
 eventData := make([][]byte, len(events))
 for i, event := range events {
@@ -251,7 +255,7 @@ have been processed.
 rxn.TestRun(handler, eventData)
 ```
 
-And then we can assert on the events in the `memorySink`.
+And finally we can assert on the events in the `memorySink`.
 
 ```go
 if len(memorySink.Records) != 2 {
@@ -265,7 +269,7 @@ wantEvents := []tumblingwindow.SumEvent{
 for i, want := range wantEvents {
   got := memorySink.Records[i]
   if !reflect.DeepEqual(want, got) {
-    t.Fatalf("want %v, got %v", want, got)
+    t.Errorf("want %v, got %v", want, got)
   }
 }
 ```
