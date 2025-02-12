@@ -38,3 +38,10 @@ svg {
   display: inline;
   vertical-align: inherit;
 }
+
+/* Undo tailwind's removal of default bullet points */
+@layer base {
+  ul, ol {
+      all: revert;
+  }
+}
