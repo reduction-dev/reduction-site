@@ -38,7 +38,7 @@ adding it to the head.
 
 More than tumbling windows, there's some nuance to sliding windows. For instance
 if just one event arrives for a user is it critical to emit all 10,080 windows
-for the week or do we just care when the value changes?
+for a minute-sliding week or do we just care when the value changes?
 
 As we implement this "total page views count by user in the last seven days"
 feature, we'll focus on the common use case of keeping a database fresh. This
@@ -97,36 +97,13 @@ In the `OnEvent` method of our operator we'll store state in a map where the
 keys are timestamps truncated to the minute and the values are the sums for each
 minute. We'll also track the previous window sum to only emit when it changes.
 
-For our map state, we need a codec to encodes the time keys and integer values
-to a binary format.
-
 ```go
-type SumByTimeCodec struct{}
-
-func (m SumByTimeCodec) EncodeKey(key time.Time) ([]byte, error) {
-	unix := key.Unix()
-	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, uint64(unix))
-	return b, nil
+// Handler is the sliding window operator handler
+type Handler struct {
+	Sink                  connectors.SinkRuntime[SumEvent]
+	CountsByMinuteSpec    rxn.MapSpec[time.Time, int]
+	PreviousWindowSumSpec rxn.ValueSpec[int]
 }
-
-func (m SumByTimeCodec) DecodeKey(data []byte) (time.Time, error) {
-	unix := int64(binary.BigEndian.Uint64(data))
-	return time.Unix(unix, 0).UTC(), nil
-}
-
-func (m SumByTimeCodec) EncodeValue(sum int) ([]byte, error) {
-	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, uint64(sum))
-	return b, nil
-}
-
-func (m SumByTimeCodec) DecodeValue(data []byte) (int, error) {
-	return int(binary.BigEndian.Uint64(data)), nil
-}
-
-// Make sure our code matches the MapStateCodec interface
-var codec rxn.MapStateCodec[time.Time, int] = SumByTimeCodec{}
 ```
 
 Then in `OnEvent` we'll load the map state, increment the sum for the event's
@@ -134,19 +111,13 @@ minute, and set a timer to fire on the next minute.
 
 ```go
 func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, eventData []byte) error {
-	// Load the minBuckets into our map object
-	minBuckets := rxn.NewMapState("state", codec)
-	if err := subject.LoadState(minBuckets); err != nil {
-		return err
-	}
+	// Load the map state for counts by minute
+	counts := h.CountsByMinuteSpec.StateFor(subject)
 
 	// Increment the count for the event's minute
 	minute := subject.Timestamp().Truncate(time.Minute)
-	sum, _ := minBuckets.Get(minute)
-	minBuckets.Set(minute, sum+1)
-
-	// Update the subject's state when done mutating the map
-	subject.UpdateState(minBuckets)
+	sum, _ := counts.Get(minute)
+	counts.Set(minute, sum+1)
 
 	// Set a timer to flush the minute's count once we reach the next minute
 	subject.SetTimer(minute.Add(time.Minute))
@@ -181,50 +152,40 @@ Next, let's write the `OnTimerExpired` method to send these events.
 
 ```go
 func (h *Handler) OnTimerExpired(ctx context.Context, subject *rxn.Subject, timestamp time.Time) error {
-	// Load the minBuckets into our map object
-	minBuckets := rxn.NewMapState("state", codec)
-	if err := subject.LoadState(minBuckets); err != nil {
-		return err
-	}
+	// Load the map state for counts by minute
+	counts := h.CountsByMinuteSpec.StateFor(subject)
 
-	// Window starts 7 days ago
+	// Our window starts 7 days ago and ends now
 	windowStart := timestamp.Add(-7 * 24 * time.Hour)
 	windowEnd := timestamp
 
-	// Either add to the window sum or delete the minute if it's outside the window
+	// Add to the window sum, delete the minute if it's outside the window, or
+	// retain the minute sum for a future window
 	windowSum := 0
-	for minute, sum := range minBuckets.All() {
+	for minute, sum := range counts.All() {
 		if !minute.Before(windowStart) && minute.Before(windowEnd) {
 			windowSum += sum
 		} else if minute.Before(windowStart) {
-			minBuckets.Delete(minute)
+			counts.Delete(minute)
 		}
 	}
 
-	// Load the previous window sum to see if it changed
-	prevWindowSum := rxn.NewIntState("prevWindowSum")
-	if err := subject.LoadState(prevWindowSum); err != nil {
-		return err
-	}
-
-	// And only collect the window sum if it changed
-	if prevWindowSum.Value != windowSum {
+	// Only collect a window sum if it changed
+	prevWindowSum := h.PreviousWindowSumSpec.StateFor(subject)
+	if prevWindowSum.Value() != windowSum {
 		h.Sink.Collect(ctx, SumEvent{
 			UserID:     string(subject.Key()),
 			Interval:   windowStart.Format(time.RFC3339) + "/" + windowEnd.Format(time.RFC3339),
 			TotalViews: windowSum,
 		})
-		prevWindowSum.Value = windowSum
+		prevWindowSum.Set(windowSum)
 		subject.UpdateState(prevWindowSum)
 	}
 
-	// Set a timer to continue emitting windows when the user has no new events
-	if windowSum != 0 {
+	// Set a timer to emit future windows in case the user gets no more view events
+	if counts.Size() > 0 {
 		subject.SetTimer(rxn.CurrentWatermark(ctx).Truncate(time.Minute).Add(time.Minute))
 	}
-
-	// Update the subject's state
-	subject.UpdateState(minBuckets)
 	return nil
 }
 ```
@@ -251,26 +212,28 @@ all the earlier events. That moving threshold is the watermark.
 For our testing we can use the `TestRun` utility to get the results of running
 our handler against a set of ViewEvents.
 
-First we set up our handler with a memory sink to record the output of our job.
+First we set up our job with a source, sink, and operator with our handler:
 
 ```go
-func TestSlidingWindow(t *testing.T) {
-	job := &jobs.Job{}
-	source := connectors.NewEmbeddedSource(job, "Source", &connectors.EmbeddedSourceParams{
-		KeyEvent: slidingwindow.KeyEvent,
-	})
-	memorySink := connectors.NewMemorySink[slidingwindow.SumEvent](job, "Sink")
-	operator := jobs.NewOperator(job, "Operator", &jobs.OperatorParams{
-		Handler: &slidingwindow.Handler{Sink: memorySink},
-	})
-	source.Connect(operator)
-	operator.Connect(memorySink)
-
-	// ...
-}
+job := &jobs.Job{}
+source := embedded.NewSource(job, "Source", &embedded.SourceParams{
+	KeyEvent: slidingwindow.KeyEvent,
+})
+memorySink := memory.NewSink[slidingwindow.SumEvent](job, "Sink")
+operator := jobs.NewOperator(job, "Operator", &jobs.OperatorParams{
+	Handler: func(op *jobs.Operator) rxn.OperatorHandler {
+		return &slidingwindow.Handler{
+			Sink:                  memorySink,
+			CountsByMinuteSpec:    rxn.NewMapSpec(op, "CountsByMinute", rxn.ScalarMapStateCodec[time.Time, int]{}),
+			PreviousWindowSumSpec: rxn.NewValueSpec(op, "PreviousWindowSum", rxn.ScalarCodec[int]{}),
+		}
+	},
+})
+source.Connect(operator)
+operator.Connect(memorySink)
 ```
 
-Then we setup our test run to with a series of ViewEvents to process.
+Then we setup our test run with a series of ViewEvents to process.
 
 ```go
 // Create a Reduction test run with a helper for adding ViewEvents.

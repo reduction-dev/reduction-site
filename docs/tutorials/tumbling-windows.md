@@ -86,7 +86,7 @@ func KeyEvent(ctx context.Context, eventData []byte) ([]rxn.KeyedEvent, error) {
 As Reduction processes the view events, it will call the handler's `OnEvent`
 method for each event to give us an opportunity to store state and trigger
 timers. In this case we'll want to store the sum of events by minute in a map
-and set a timer to trigger when a minute over.
+and set a timer to trigger when a minute is over.
 
 :::tip[Why do we need a map?]
 You may wonder why we need to store events by minute rather than just storing a
@@ -97,38 +97,15 @@ may fire. This is similar to timers in programming languages like Go
 arrive before the timer fires for the previous minute.
 :::
 
-Each supported language has its own "map state" construct to handle loading and
-persisting maps. Reduction is agnostic about how values are serialized for
-network transport and storage so we'll provide a codec (coder/decoder) to
-convert the keys and values from their types to binary and back.
+Each supported language has state specs to handle converting our types to a
+binary format and back according to a provided codec (coder/decoder). For a map
+of timestamps to integers, we can use the `MapSpec` type.
 
 ```go
-type SumByTimeCodec struct{}
-
-func (m SumByTimeCodec) EncodeKey(key time.Time) ([]byte, error) {
-	unix := key.Unix()
-	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, uint64(unix))
-	return b, nil
+type Handler struct {
+	Sink           connectors.SinkRuntime[SumEvent]
+	CountsByMinute rxn.MapSpec[time.Time, int]
 }
-
-func (m SumByTimeCodec) DecodeKey(data []byte) (time.Time, error) {
-	unix := int64(binary.BigEndian.Uint64(data))
-	return time.Unix(unix, 0).UTC(), nil
-}
-
-func (m SumByTimeCodec) EncodeValue(sum int) ([]byte, error) {
-	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, uint64(sum))
-	return b, nil
-}
-
-func (m SumByTimeCodec) DecodeValue(data []byte) (int, error) {
-	return int(binary.BigEndian.Uint64(data)), nil
-}
-
-// Make sure our code matches the MapStateCodec interface
-var codec rxn.MapStateCodec[time.Time, int] = SumByTimeCodec{}
 ```
 
 In our handler's `OnEvent` method we'll load the state, increment
@@ -137,19 +114,13 @@ to fire on the next minute.
 
 ```go
 func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, eventData []byte) error {
-	// Load the state into our map object
-	state := rxn.NewMapState("state", codec)
-	if err := subject.LoadState(state); err != nil {
-		return err
-	}
+	// Load the map state for counts by minute 
+	state := h.CountsByMinute.StateFor(subject)
 
 	// Increment the count for the event's minute
 	minute := subject.Timestamp().Truncate(time.Minute)
 	sum, _ := state.Get(minute)
 	state.Set(minute, sum+1)
-
-	// Update the subject's state when done mutating the map
-	subject.UpdateState(state)
 
 	// Set a timer to flush the minute's count once we reach the next minute
 	subject.SetTimer(minute.Add(time.Minute))
@@ -176,11 +147,8 @@ And then write the `OnTimerExpired` method to send these events to the sink.
 
 ```go
 func (h *Handler) OnTimerExpired(ctx context.Context, subject *rxn.Subject, timestamp time.Time) error {
-	// Load the state into our map object
-	state := rxn.NewMapState("state", codec)
-	if err := subject.LoadState(state); err != nil {
-		return err
-	}
+	// Load the map state for counts by minute
+	state := h.CountsByMinute.StateFor(subject)
 
 	// Emit the sums for every earlier minute bucket
 	for minute, sum := range state.All() {
@@ -195,9 +163,6 @@ func (h *Handler) OnTimerExpired(ctx context.Context, subject *rxn.Subject, time
 			state.Delete(minute)
 		}
 	}
-
-	// Update the subject's state
-	subject.UpdateState(state)
 	return nil
 }
 ```
@@ -212,7 +177,7 @@ utility. This utility invokes the `reduction test` command with a list of test
 events to process with the handler. When all the events have been processed, we
 can inspect an in-memory sink to see what events we would have sent.
 
-Our Handle's `Sink` member is an interface that allows us to collect our
+Our Handler's `Sink` member is an interface that allows us to collect our
 `SumEvent` events (`connectors.SinkRuntime[SumEvent]`). When testing we can use
 Reduction's memory sink type to record sink events rather than having the
 cluster handle them. Let's start the test by setting up our job.
@@ -220,12 +185,17 @@ cluster handle them. Let's start the test by setting up our job.
 ```go
 func TestTumblingWindow(t *testing.T) {
 	job := &jobs.Job{}
-	source := connectors.NewEmbeddedSource(job, "Source", &connectors.EmbeddedSourceParams{
+	source := embedded.NewSource(job, "Source", &embedded.SourceParams{
 		KeyEvent: tumblingwindow.KeyEvent,
 	})
-	memorySink := connectors.NewMemorySink[tumblingwindow.SumEvent](job, "Sink")
+	memorySink := memory.NewSink[tumblingwindow.SumEvent](job, "Sink")
 	operator := jobs.NewOperator(job, "Operator", &jobs.OperatorParams{
-		Handler: &tumblingwindow.Handler{Sink: memorySink},
+		Handler: func(op *jobs.Operator) rxn.OperatorHandler {
+			return &tumblingwindow.Handler{
+				Sink:           memorySink,
+				CountsByMinute: rxn.NewMapSpec(op, "CountsByMinute", rxn.ScalarMapStateCodec[time.Time, int]{}),
+			}
+		},
 	})
 	source.Connect(operator)
 	operator.Connect(memorySink)
