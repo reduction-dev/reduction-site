@@ -99,8 +99,9 @@ const config: Config = {
       copyright: `Copyright © ${new Date().getFullYear()} Reduction`,
     },
     prism: {
-      theme: prismThemes.github,
-      darkTheme: prismThemes.dracula,
+      theme: prismThemes.oneLight,
+      additionalLanguages: ['bash'],
+      darkTheme: prismThemes.oneDark,
     },
   } satisfies Preset.ThemeConfig,
 

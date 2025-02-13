@@ -1,18 +1,19 @@
 ---
 sidebar_position: 0
+title: First Reduction Job
 ---
 
-# Hello World
+# First Reduction Job: High Scores
 
 Let's create a simple Reduction job that tracks high scores for players in a
 game. When a player achieves a new personal best score, our job will emit an
-event to celebrate their achievement!
+event to celebrate their achievement.
 
 ## Overview
 
-In this example, we'll:
-1. Process a stream of score events containing user IDs and scores
-2. Track the high score for each user
+This job will:
+1. Process a stream of score events containing user IDs and numeric scores
+2. Remember the high score for each user
 3. Emit events whenever a user beats their previous best score
 
 The input events will look like:
@@ -25,24 +26,15 @@ The input events will look like:
 }
 ```
 
-And we'll emit events when users achieve new high scores:
+And we'll print messages when users achieve new high scores:
 
-```json
-{
-  "user_id": "player123",
-  "score": 100,
-  "previous_high": 0
-}
 ```
-
-This example demonstrates core Reduction concepts like:
-* Processing an unbounded stream of events
-* Maintaining state (high scores) per key (user)
-* Emitting events conditionally based on state changes
+🏆 New high score for player123: 100 (previous: 0)
+```
 
 ## Complete Code
 
-Here's the complete code for our hello world job:
+Here's the complete code for our high scores job:
 
 ```go
 package main
@@ -67,39 +59,41 @@ type ScoreEvent struct {
 
 // Handler tracks high scores for each user
 type Handler struct {
-  sink          *stdio.Sink
-  highScoreSpec rxn.ValueSpec[int]
+  Sink          rxn.Sink[stdio.Event]  // For emitting output
+  HighScoreSpec rxn.ValueSpec[int]     // State specification
 }
 
-// Transform input events into keyed events
-func (h *Handler) KeyEvent(ctx context.Context, data []byte) ([]rxn.KeyedEvent, error) {
+// KeyEvent extracts the user ID as the key for event routing and a timestamp
+func KeyEvent(ctx context.Context, eventData []byte) ([]rxn.KeyedEvent, error) {
   var event ScoreEvent
-  if err := json.Unmarshal(data, &event); err != nil {
+  if err := json.Unmarshal(eventData, &event); err != nil {
     return nil, err
   }
   
   return []rxn.KeyedEvent{{
     Key:       []byte(event.UserID),
     Timestamp: event.Timestamp,
-    Value:     data,
+    Value:     eventData,
   }}, nil
 }
 
-// Process each score and emit if it's a new high score
-func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, data []byte) error {
+// OnEvent processes each score event and emits when there's a new high score
+func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, eventData []byte) error {
   var event ScoreEvent
-  if err := json.Unmarshal(data, &event); err != nil {
+  if err := json.Unmarshal(eventData, &event); err != nil {
     return err
   }
 
   // Get current high score state for this user
-  highScore := h.highScoreSpec.StateFor(subject)
+  highScore := h.HighScoreSpec.StateFor(subject)
 
   // Check if this is a new high score
   if event.Score > highScore.Value() {
     // Format and emit the high score message
-    h.sink.Collect(ctx, []byte(fmt.Sprintf("🏆 New high score for %s: %d (previous: %d)\n",
-      event.UserID, event.Score, highScore.Value())))
+    message := fmt.Sprintf(
+      "🏆 New high score for %s: %d (previous: %d)\n",
+      event.UserID, event.Score, highScore.Value())
+    h.Sink.Collect(ctx, []byte(message))
 
     // Update the stored high score
     highScore.Set(event.Score)
@@ -109,14 +103,14 @@ func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, data []byte
 }
 
 func main() {
-  // Create a new job
-  job := &jobs.Job{
-    WorkerCount: 1,
-    WorkingStorageLocation: "storage",
-  }
+  // Create a new job with a single worker
+  job := &jobs.Job{WorkerCount: 1}
 
   // Create source that reads JSON from stdin
-  source := stdio.NewSource(job, "Source", &stdio.SourceParams{})
+  source := stdio.NewSource(job, "Source", &stdio.SourceParams{
+    KeyEvent: KeyEvent,
+    Framing:  stdio.Framing{Delimiter: []byte{'\n'}},
+  })
 
   // Create sink that writes to stdout
   sink := stdio.NewSink(job, "Sink")
@@ -125,13 +119,13 @@ func main() {
   operator := jobs.NewOperator(job, "Operator", &jobs.OperatorParams{
     Handler: func(op *jobs.Operator) rxn.OperatorHandler {
       return &Handler{
-        sink:          sink,
-        highScoreSpec: rxn.NewValueSpec(op, "highscore", rxn.ScalarCodec[int]{}),
+        Sink:          sink,
+        HighScoreSpec: rxn.NewValueSpec(op, "highscore", rxn.ScalarCodec[int]{}),
       }
     },
   })
 
-  // Connect components
+  // Connect source -> operator -> sink
   source.Connect(operator)
   operator.Connect(sink)
 
@@ -142,9 +136,9 @@ func main() {
 
 ## Code Walkthrough 
 
-Let's break down the key parts of our hello world job:
+Let's step through the key parts of our job.
 
-### Event Types
+### Event Type
 
 We define a single type for parsing the input score events:
 
@@ -158,53 +152,61 @@ type ScoreEvent struct {
 
 ### State Management
 
-Our handler maintains a single piece of state per user - their current high score:
+Our handler maintains a single piece of state per user: their current high score.
 
 ```go
 type Handler struct {
-  sink          *stdio.Sink
-  highScoreSpec rxn.ValueSpec[int]  // State specification
+  Sink          rxn.Sink[stdio.Event]
+  HighScoreSpec rxn.ValueSpec[int]  // State specification
 }
 ```
 
 The `ValueSpec[int]` tells Reduction how to store integers (the high scores) and
-provides methods to access and update them per user.
+lets us retrieve a state value on each `OnEvent` call.
 
 ### Event Processing
 
-The handler implements two key methods:
+`KeyEvent` is a stateless function that accepts the raw JSON input and specifies
+a key and a timestamp with its return value. The key allows Reduction to
+partition our data stream and the timestamp allows it track the time relative to
+the events ("event time").
 
-1. `KeyEvent` - Takes raw input and extracts the user ID as the key:
 ```go
-func (h *Handler) KeyEvent(ctx context.Context, data []byte) ([]rxn.KeyedEvent, error) {
+func KeyEvent(ctx context.Context, eventData []byte) ([]rxn.KeyedEvent, error) {
   var event ScoreEvent
-  if err := json.Unmarshal(data, &event); err != nil {
+  if err := json.Unmarshal(eventData, &event); err != nil {
     return nil, err
   }
   
   return []rxn.KeyedEvent{{
     Key:       []byte(event.UserID),  // Partition by user ID
     Timestamp: event.Timestamp,
-    Value:     data,
+    Value:     eventData,
   }}, nil
 }
 ```
 
-2. `OnEvent` - Processes each score and emits an event if it's a new high score:
+Once events are keyed and distributed in our Reduction cluster, they'll be
+handled by `OnEvent`. In this method we:
+* Decode the value of our KeyedEvent
+* Load the current high score from state
+* Update the current high score and send a new high score event if the user
+  beat their previous high score.
+
 ```go
-func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, data []byte) error {
+func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, eventData []byte) error {
   var event ScoreEvent
-  if err := json.Unmarshal(data, &event); err != nil {
+  if err := json.Unmarshal(eventData, &event); err != nil {
     return err
   }
 
   // Get current high score state for this user
-  highScore := h.highScoreSpec.StateFor(subject)
+  highScore := h.HighScoreSpec.StateFor(subject)
 
   // Check if this is a new high score
   if event.Score > highScore.Value() {
     // Format and emit the message and update the high score
-    h.sink.Collect(ctx, []byte(fmt.Sprintf("🏆 New high score for %s: %d (previous: %d)\n",
+    h.Sink.Collect(ctx, []byte(fmt.Sprintf("🏆 New high score for %s: %d (previous: %d)\n",
       event.UserID, event.Score, highScore.Value())))
 
     highScore.Set(event.Score)
@@ -216,22 +218,25 @@ func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, data []byte
 
 ### Job Configuration 
 
-Finally, we wire everything together:
+Finally, we configure and run our job.
 
 ```go
-job := &jobs.Job{
-  WorkerCount: 1,
-  WorkingStorageLocation: "storage",
-}
+job := &jobs.Job{WorkerCount: 1}
 
-source := stdio.NewSource(job, "Source", &stdio.SourceParams{})
+// Create a source that reads from stdin
+source := stdio.NewSource(job, "Source", &stdio.SourceParams{
+  KeyEvent: KeyEvent,
+  Framing:  stdio.Framing{Delimiter: []byte{'\n'}},
+})
+
+// Create a sink that writes to stdout
 sink := stdio.NewSink(job, "Sink")
 
 operator := jobs.NewOperator(job, "Operator", &jobs.OperatorParams{
   Handler: func(op *jobs.Operator) rxn.OperatorHandler {
     return &Handler{
-      sink:          sink,
-      highScoreSpec: rxn.NewValueSpec(op, "highscore", rxn.ScalarCodec[int]{}),
+      Sink:          sink,
+      HighScoreSpec: rxn.NewValueSpec(op, "highscore", rxn.ScalarCodec[int]{}),
     }
   },
 })
@@ -244,10 +249,17 @@ rxn.Run(job)
 
 ## Running the Job
 
-First, create a named pipe that we'll use to send events to our job:
+To run the job locally with our `stdin` source and sink, we'll first create a
+named pipe that we can write to.
 
 ```bash
 mkfifo events
+```
+
+Build your Reduction handler:
+
+```bash
+go build ./cmd/highscore
 ```
 
 In one terminal, start the job reading from the pipe:
@@ -281,25 +293,14 @@ You should see output like:
 ```
 
 The job will keep running and processing new events as you send them. When
-you're done testing, press Ctrl+C to stop the job.
+you're done testing, press Ctrl+C to stop the job and remove the named pipe:
 
-:::note
-The named pipe (`events`) will persist in your filesystem until you delete it.
-You can remove it with `rm events` when you're done.
-:::
+```
+rm events
+```
 
 ## Next Steps
 
-This hello world example demonstrates the basics of building a stateful
-streaming application with Reduction. From here, you can:
-
-1. Try the [Tumbling Windows](./tumbling-windows.md) tutorial to learn about
-windowing strategies
-2. Check out the [Sliding Windows](./sliding-windows.md) tutorial for more
-complex windowing
-3. See the [Session Windows](./session-windows.md) tutorial for handling user
-sessions
-
-Each tutorial builds on these concepts and introduces new features of the
-Reduction framework.
-
+This high scores example demonstrates the basics of building a stateful
+streaming application with Reduction. From here, you can start learning
+about windowing the [Tumbling Windows](./tumbling-windows.md) tutorial
