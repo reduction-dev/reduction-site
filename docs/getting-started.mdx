@@ -1,0 +1,78 @@
+---
+sidebar_position: 1
+title: Getting Started
+---
+
+import { DownloadLinks } from '@site/src/components/DownloadLinks';
+import { currentVersion } from '@site/src/constants';
+import CodeBlock from '@theme/CodeBlock';
+import quickStartMain from '!!raw-loader!@site/examples/quick-start/main.go';
+
+# Getting Started
+
+This guide will help you set up your environment and run your first Reduction job.
+
+## Installation
+
+The Reduction CLI can be installed with homebrew:
+
+```bash
+brew install reduction-dev/tap/reduction
+```
+
+Or downloaded and run with one of these pre-built binaries:
+
+<ul>
+   <DownloadLinks version={currentVersion}>
+      {({ key, url, displayName }) => (
+         <li key={key}>
+            <a href={url}>{`${currentVersion} - ${displayName}`}</a>
+         </li>
+      )}
+   </DownloadLinks>
+</ul>
+
+Make sure you have `reduction` in your path:
+
+<CodeBlock language="shell-session">
+{`$ reduction --version 
+reduction version ${currentVersion}`}
+</CodeBlock>
+
+## Setup
+
+Create a new Go project and add the Reduction Go SDK as a dependency. For example:
+
+```bash
+mkdir my-job && cd my-job
+go mod init my-job
+go get reduction.dev/reduction-go
+```
+
+## Author a Job
+
+As a demo we'll create job that counts all the events from an embedded source of
+incrementing numbers and prints to stdout every 100,000th event it processes.
+Don't worry about the specifics of the job code yet, let's just get something
+running.
+
+<CodeBlock language="go">{quickStartMain}</CodeBlock>
+
+## Running a Job
+
+Try out the high scores job:
+
+1. Build the job:
+
+   ```bash
+   go build
+   ```
+
+2. Run the job with `reduction-dev`:
+   
+   ```bash
+   reduction dev ./my-job
+   ```
+
+At this point you should see a line printed to the terminal for every 100,000th
+event processed.
