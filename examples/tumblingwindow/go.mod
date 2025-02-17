@@ -1,4 +1,4 @@
-module my-job
+module tumblingwindow
 
 go 1.24.0
 

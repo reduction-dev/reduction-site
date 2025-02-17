@@ -17,7 +17,7 @@ type Handler struct {
 }
 
 // Count each event that arrives and send a message to the sink every 100,000 events.
-func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, eventData []byte) error {
+func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, event rxn.KeyedEvent) error {
 	count := h.countSpec.StateFor(subject)
 	count.Set(count.Value() + 1)
 	if count.Value()%100_000 == 0 {
