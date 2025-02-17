@@ -2,10 +2,10 @@ package slidingwindow_test
 
 import (
 	"encoding/json"
-	"reflect"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"reduction.dev/reduction-demos/handlers/slidingwindow"
 	"reduction.dev/reduction-go/connectors/embedded"
 	"reduction.dev/reduction-go/connectors/memory"
@@ -14,6 +14,7 @@ import (
 )
 
 func TestSlidingWindow(t *testing.T) {
+	// snippet-start: job-setup
 	job := &jobs.Job{}
 	source := embedded.NewSource(job, "Source", &embedded.SourceParams{
 		KeyEvent: slidingwindow.KeyEvent,
@@ -30,8 +31,9 @@ func TestSlidingWindow(t *testing.T) {
 	})
 	source.Connect(operator)
 	operator.Connect(memorySink)
+	// snippet-end: job-setup
 
-	// Create a Reduction test run with a helper for adding ViewEvents.
+	// snippet-start: test-run
 	tr := rxn.NewTestRun(job)
 
 	/* Events for user accumulate */
@@ -68,7 +70,9 @@ func TestSlidingWindow(t *testing.T) {
 	if err := tr.Run(); err != nil {
 		t.Fatalf("failed to run handler: %v", err)
 	}
+	// snippet-end: test-run
 
+	// snippet-start: assert
 	// Filter events to just focus on "user"
 	userEvents := []slidingwindow.SumEvent{}
 	for _, event := range memorySink.Records {
@@ -77,7 +81,7 @@ func TestSlidingWindow(t *testing.T) {
 		}
 	}
 
-	wantEvents := []slidingwindow.SumEvent{
+	assert.Equal(t, []slidingwindow.SumEvent{
 		// TotalViews accumulate for the first 3 minutes
 		{UserID: "user", Interval: "2025-01-01T00:02:00Z/2025-01-08T00:02:00Z", TotalViews: 2},
 		{UserID: "user", Interval: "2025-01-01T00:03:00Z/2025-01-08T00:03:00Z", TotalViews: 4},
@@ -87,27 +91,8 @@ func TestSlidingWindow(t *testing.T) {
 		{UserID: "user", Interval: "2025-01-08T00:02:00Z/2025-01-15T00:02:00Z", TotalViews: 3},
 		{UserID: "user", Interval: "2025-01-08T00:03:00Z/2025-01-15T00:03:00Z", TotalViews: 1},
 		{UserID: "user", Interval: "2025-01-08T00:04:00Z/2025-01-15T00:04:00Z", TotalViews: 0},
-	}
-
-	assertEventsEqual(t, wantEvents, userEvents)
-}
-
-// assertEventsEqual compares two slices of SumEvents and reports differences clearly
-func assertEventsEqual(t *testing.T, want, got []slidingwindow.SumEvent) {
-	t.Helper()
-	if !reflect.DeepEqual(want, got) {
-		t.Errorf("events don't match:\nwant: %+v\n got: %+v", want, got)
-		if len(want) != len(got) {
-			t.Errorf("length mismatch: want %d, got %d", len(want), len(got))
-			return
-		}
-		// If lengths match, show detailed differences
-		for i := range want {
-			if !reflect.DeepEqual(want[i], got[i]) {
-				t.Errorf("event[%d] differs:\nwant: %+v\n got: %+v", i, want[i], got[i])
-			}
-		}
-	}
+	}, userEvents, "events should match expected sequence")
+	// snippet-end: assert
 }
 
 func addViewEvent(tr *rxn.TestRunNext, userID string, timestamp string) {

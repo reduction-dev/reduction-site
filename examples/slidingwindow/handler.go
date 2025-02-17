@@ -9,17 +9,22 @@ import (
 	"reduction.dev/reduction-go/rxn"
 )
 
-// ViewEvent represents a user viewing a page
-type ViewEvent struct {
-	UserID    string `json:"user_id"`
-	Timestamp string `json:"timestamp"`
-}
-
+// snippet-start: sum-event
 // SumEvent represents the sum of views for a user over a time interval
 type SumEvent struct {
 	UserID     string `json:"user_id"`
 	Interval   string `json:"interval"`
 	TotalViews int    `json:"total_views"`
+}
+
+// snippet-end: sum-event
+
+// snippet-start: key-event
+
+// ViewEvent represents a user viewing a page
+type ViewEvent struct {
+	UserID    string    `json:"user_id"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 // KeyEvent takes the raw data from our source and returned events with timestamps and keys
@@ -29,24 +34,24 @@ func KeyEvent(ctx context.Context, eventData []byte) ([]rxn.KeyedEvent, error) {
 		return nil, err
 	}
 
-	timestamp, err := time.Parse(time.RFC3339, event.Timestamp)
-	if err != nil {
-		return nil, err
-	}
-
 	return []rxn.KeyedEvent{{
 		Key:       []byte(event.UserID),
-		Timestamp: timestamp,
+		Timestamp: event.Timestamp,
 	}}, nil
 }
 
-// Handler is the sliding window operator handler
+// snippet-end: key-event
+
+// snippet-start: handler
 type Handler struct {
 	Sink                  connectors.SinkRuntime[SumEvent]
 	CountsByMinuteSpec    rxn.MapSpec[time.Time, int]
 	PreviousWindowSumSpec rxn.ValueSpec[int]
 }
 
+// snippet-end: handler
+
+// snippet-start: on-event
 func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, event rxn.KeyedEvent) error {
 	// Load the map state for counts by minute
 	counts := h.CountsByMinuteSpec.StateFor(subject)
@@ -61,6 +66,9 @@ func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, event rxn.K
 	return nil
 }
 
+// snippet-end: on-event
+
+// snippet-start: on-timer
 func (h *Handler) OnTimerExpired(ctx context.Context, subject *rxn.Subject, timestamp time.Time) error {
 	// Load the map state for counts by minute
 	counts := h.CountsByMinuteSpec.StateFor(subject)
@@ -93,8 +101,12 @@ func (h *Handler) OnTimerExpired(ctx context.Context, subject *rxn.Subject, time
 	}
 
 	// Set a timer to emit future windows in case the user gets no more view events
+	// highlight-start
 	if counts.Size() > 0 {
 		subject.SetTimer(rxn.CurrentWatermark(ctx).Truncate(time.Minute).Add(time.Minute))
 	}
+	// highlight-end
 	return nil
 }
+
+// snippet-end: on-timer

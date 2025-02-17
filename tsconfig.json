@@ -5,7 +5,8 @@
     "baseUrl": ".",
     "strict": true,
     "types": [
-      "./.wrangler/types/runtime"
+      "./.wrangler/types/runtime",
+      "bun-types"
     ]
   },
   "exclude": [".docusaurus", "build"]

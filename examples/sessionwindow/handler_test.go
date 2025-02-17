@@ -15,6 +15,7 @@ import (
 )
 
 func TestSessionWindow(t *testing.T) {
+	// snippet-start: job-setup
 	job := &jobs.Job{}
 	source := embedded.NewSource(job, "Source", &embedded.SourceParams{
 		KeyEvent: sessionwindow.KeyEvent,
@@ -31,7 +32,9 @@ func TestSessionWindow(t *testing.T) {
 	})
 	source.Connect(operator)
 	operator.Connect(memorySink)
+	// snippet-end: job-setup
 
+	// snippet-start: test-run
 	tr := rxn.NewTestRun(job)
 
 	// First session with events close together
@@ -52,7 +55,9 @@ func TestSessionWindow(t *testing.T) {
 	tr.AddWatermark()
 
 	require.NoError(t, tr.Run())
+	// snippet-end: test-run
 
+	// snippet-start: assert
 	// Filter events to just focus on "user"
 	userEvents := []sessionwindow.SessionEvent{}
 	for _, event := range memorySink.Records {
@@ -65,6 +70,7 @@ func TestSessionWindow(t *testing.T) {
 		{UserID: "user", Interval: "2025-01-01T00:01:00Z/2025-01-01T00:10:00Z"},
 		{UserID: "user", Interval: "2025-01-01T00:30:00Z/2025-01-01T00:35:00Z"},
 	}, userEvents)
+	// snippet-end: assert
 }
 
 func addViewEvent(tr *rxn.TestRunNext, userID string, timestamp string) {

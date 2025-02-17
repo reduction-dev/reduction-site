@@ -2,6 +2,10 @@
 sidebar_position: 1
 ---
 
+import CodeSnippet from '@site/src/components/CodeSnippet';
+import tumblingWindowHandler from '!!raw-loader!@site/examples/tumblingwindow/handler.go';
+import tumblingWindowTest from '!!raw-loader!@site/examples/tumblingwindow/handler_test.go';
+
 # Tumbling Windows
 
 ## Overview
@@ -52,34 +56,7 @@ subject key from an event and return a `KeyedEvent` type. Reduction uses the
 uses the key to partition events between the operators that it manages
 internally.
 
-```go
-type Handler struct {
-	Sink connectors.SinkRuntime[SumEvent]
-}
-
-// A struct for unmarshalling the JSON events
-type ViewEvent struct {
-	ChannelID string `json:"channel_id"`
-	Timestamp string `json:"timestamp"`
-}
-
-func KeyEvent(ctx context.Context, eventData []byte) ([]rxn.KeyedEvent, error) {
-	var event ViewEvent
-	if err := json.Unmarshal(eventData, &event); err != nil {
-		return nil, err
-	}
-
-	timestamp, err := time.Parse(time.RFC3339, event.Timestamp)
-	if err != nil {
-		return nil, err
-	}
-
-	return []rxn.KeyedEvent{{
-		Key:       []byte(event.ChannelID),
-		Timestamp: timestamp,
-	}}, nil
-}
-```
+<CodeSnippet language="go" code={tumblingWindowHandler} marker="key-event" />
 
 ## Processing Each Event
 
@@ -101,32 +78,13 @@ Each supported language has state specs to handle converting our types to a
 binary format and back according to a provided codec (coder/decoder). For a map
 of timestamps to integers, we can use the `MapSpec` type.
 
-```go
-type Handler struct {
-	Sink           connectors.SinkRuntime[SumEvent]
-	CountsByMinute rxn.MapSpec[time.Time, int]
-}
-```
+<CodeSnippet language="go" code={tumblingWindowHandler} marker="handler" />
 
 In our handler's `OnEvent` method we'll load the state, increment
 the sum for the event's minute (rounding down), and set a timer
 to fire on the next minute.
 
-```go
-func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, eventData []byte) error {
-	// Load the map state for counts by minute 
-	state := h.CountsByMinute.StateFor(subject)
-
-	// Increment the count for the event's minute
-	minute := subject.Timestamp().Truncate(time.Minute)
-	sum, _ := state.Get(minute)
-	state.Set(minute, sum+1)
-
-	// Set a timer to flush the minute's count once we reach the next minute
-	subject.SetTimer(minute.Add(time.Minute))
-	return nil
-}
-```
+<CodeSnippet language="go" code={tumblingWindowHandler} marker="on-event" />
 
 ## Processing Timers
 
@@ -135,37 +93,11 @@ minute bucket from our map.
 
 Let's create an object to handle the JSON serialization.
 
-```go
-type SumEvent struct {
-	ChannelID string `json:"channel_id"`
-	Timestamp string `json:"timestamp"`
-	Sum       int    `json:"sum"`
-}
-```
+<CodeSnippet language="go" code={tumblingWindowHandler} marker="sum-event" />
 
 And then write the `OnTimerExpired` method to send these events to the sink.
 
-```go
-func (h *Handler) OnTimerExpired(ctx context.Context, subject *rxn.Subject, timestamp time.Time) error {
-	// Load the map state for counts by minute
-	state := h.CountsByMinute.StateFor(subject)
-
-	// Emit the sums for every earlier minute bucket
-	for minute, sum := range state.All() {
-		if minute.Before(timestamp) {
-			// Emit the count for the minute
-			h.Sink.Collect(ctx, SumEvent{
-				ChannelID: string(subject.Key()),
-				Timestamp: minute.Format(time.RFC3339),
-				Sum:       sum,
-			})
-			// Clean up the emitted minute entry
-			state.Delete(minute)
-		}
-	}
-	return nil
-}
-```
+<CodeSnippet language="go" code={tumblingWindowHandler} marker="on-timer" />
 
 ## Testing
 
@@ -182,61 +114,22 @@ Our Handler's `Sink` member is an interface that allows us to collect our
 Reduction's memory sink type to record sink events rather than having the
 cluster handle them. Let's start the test by setting up our job.
 
-```go
-func TestTumblingWindow(t *testing.T) {
-	job := &jobs.Job{}
-	source := embedded.NewSource(job, "Source", &embedded.SourceParams{
-		KeyEvent: tumblingwindow.KeyEvent,
-	})
-	memorySink := memory.NewSink[tumblingwindow.SumEvent](job, "Sink")
-	operator := jobs.NewOperator(job, "Operator", &jobs.OperatorParams{
-		Handler: func(op *jobs.Operator) rxn.OperatorHandler {
-			return &tumblingwindow.Handler{
-				Sink:           memorySink,
-				CountsByMinute: rxn.NewMapSpec(op, "CountsByMinute", rxn.ScalarMapStateCodec[time.Time, int]{}),
-			}
-		},
-	})
-	source.Connect(operator)
-	operator.Connect(memorySink)
+<CodeSnippet language="go" code={tumblingWindowTest} marker="job-setup" />
 
-	// ...
-}
-```
-
-In our "test run" we'll add a few view events for a channel and advance the
+In our "test run" we'll add a some view events for a channel and advance the
 watermark.
 
-```go
-tr := rxn.NewTestRun(job)
-addViewEvent(tr, "channel", "2025-01-01T00:01:00Z")
-addViewEvent(tr, "channel", "2025-01-01T00:01:30Z")
-addViewEvent(tr, "channel", "2025-01-01T00:01:59Z")
-addViewEvent(tr, "channel", "2025-01-01T00:02:10Z")
-addViewEvent(tr, "channel", "2025-01-01T00:03:01Z")
-tr.AddWatermark()
-tr.Run()
-```
+<CodeSnippet language="go" code={tumblingWindowTest} marker="test-run" />
+
+:::tip[Advancing the Watermark]
+In stream processing, a watermark indicates that all events up to a certain
+timestamp have been processed. When we advance the watermark in testing, we're
+simulating the passage of time and allowing timers to fire.
+:::
 
 And then we check the memory sink for the events we expect to have been emitted.
 
-```go
-wantEvents := []tumblingwindow.SumEvent{
-	{ChannelID: "channel", Timestamp: "2025-01-01T00:01:00Z", Sum: 3},
-	{ChannelID: "channel", Timestamp: "2025-01-01T00:02:00Z", Sum: 1},
-}
-
-if len(memorySink.Records) != 2 {
-	t.Fatalf("expected 2 records, got %d\nmemorySink.Records: %+v\nwantEvents: %+v", len(memorySink.Records), memorySink.Records, wantEvents)
-}
-
-for i, want := range wantEvents {
-	got := memorySink.Records[i]
-	if !reflect.DeepEqual(want, got) {
-		t.Errorf("want %v, got %v", want, got)
-	}
-}
-```
+<CodeSnippet language="go" code={tumblingWindowTest} marker="assert" />
 
 You might wonder why we get a closed window for minute 2 but not minute 3 in
 this test. The window for minute three is still open because, according to event

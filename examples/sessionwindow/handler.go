@@ -11,10 +11,11 @@ import (
 	"reduction.dev/reduction-go/rxn"
 )
 
+// snippet-start: json-structs
 // ViewEvent represents a user viewing a page
 type ViewEvent struct {
-	UserID    string `json:"user_id"`
-	Timestamp string `json:"timestamp"`
+	UserID    string    `json:"user_id"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 // SessionEvent represents a user's continuous session on the site
@@ -23,6 +24,9 @@ type SessionEvent struct {
 	Interval string `json:"interval"`
 }
 
+// snippet-end: json-structs
+
+// snippet-start: session-state
 // Session represents the internal state of an active session
 type Session struct {
 	Start time.Time
@@ -45,7 +49,7 @@ func (s Session) IsZero() bool {
 type SessionCodec struct{}
 
 // DecodeValue returns a Session, interpreting the binary data as two uint64 timestamps
-func (s SessionCodec) DecodeValue(b []byte) (Session, error) {
+func (c SessionCodec) DecodeValue(b []byte) (Session, error) {
 	if len(b) != 16 { // 8 bytes for each uint64
 		return Session{}, fmt.Errorf("invalid session data length: %d", len(b))
 	}
@@ -56,16 +60,19 @@ func (s SessionCodec) DecodeValue(b []byte) (Session, error) {
 }
 
 // EncodeValue returns the binary representation of a Session as two uint64 timestamps
-func (s SessionCodec) EncodeValue(value Session) ([]byte, error) {
+func (c SessionCodec) EncodeValue(value Session) ([]byte, error) {
 	b := make([]byte, 16)
 	binary.BigEndian.PutUint64(b[:8], uint64(value.Start.UTC().UnixNano()))
 	binary.BigEndian.PutUint64(b[8:], uint64(value.End.UTC().UnixNano()))
 	return b, nil
 }
 
+// snippet-end: session-state
+
 // Make sure SessionCodec implements the rxn.ValueStateCodec interface
 var _ rxn.ValueStateCodec[Session] = SessionCodec{}
 
+// snippet-start: handler-struct
 // Handler is the session window operator handler
 type Handler struct {
 	Sink                connectors.SinkRuntime[SessionEvent]
@@ -73,23 +80,24 @@ type Handler struct {
 	InactivityThreshold time.Duration
 }
 
+// snippet-end: handler-struct
+
+// snippet-start: key-event
 func KeyEvent(ctx context.Context, eventData []byte) ([]rxn.KeyedEvent, error) {
 	var event ViewEvent
 	if err := json.Unmarshal(eventData, &event); err != nil {
 		return nil, err
 	}
 
-	timestamp, err := time.Parse(time.RFC3339, event.Timestamp)
-	if err != nil {
-		return nil, err
-	}
-
 	return []rxn.KeyedEvent{{
 		Key:       []byte(event.UserID),
-		Timestamp: timestamp,
+		Timestamp: event.Timestamp,
 	}}, nil
 }
 
+// snippet-end: key-event
+
+// snippet-start: on-event
 func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, event rxn.KeyedEvent) error {
 	sessionState := h.SessionSpec.StateFor(subject)
 	session := sessionState.Value()
@@ -112,12 +120,50 @@ func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, event rxn.K
 	return nil
 }
 
+// snippet-end: on-event
+
+// snippet-start: on-timer
 func (h *Handler) OnTimerExpired(ctx context.Context, subject *rxn.Subject, timestamp time.Time) error {
 	sessionState := h.SessionSpec.StateFor(subject)
 	session := sessionState.Value()
+
+	// Check whether this is the latest timer we set for this subject
 	if timestamp.Equal(session.End.Add(h.InactivityThreshold)) {
 		h.Sink.Collect(ctx, session.SessionEvent(subject.Key()))
 		sessionState.Drop()
 	}
+	return nil
+}
+
+// snippet-end: on-timer
+
+func (h *Handler) OnEvent24h(ctx context.Context, subject *rxn.Subject, event rxn.KeyedEvent) error {
+	sessionState := h.SessionSpec.StateFor(subject)
+	session := sessionState.Value()
+	eventTime := subject.Timestamp()
+
+	// snippet-start: on-event-24h
+	if session.IsZero() {
+		// Start a new session for the user
+		session = Session{Start: eventTime, End: eventTime}
+	} else if eventTime.After(session.End.Add(h.InactivityThreshold)) {
+		// If inactive, emit the session event and start a new session
+		h.Sink.Collect(ctx, session.SessionEvent(subject.Key()))
+		session = Session{Start: eventTime, End: eventTime}
+		// highlight-start
+	} else if eventTime.Sub(session.Start) >= 24*time.Hour {
+		// If session reaches 24 hours, emit it and start a new one
+		session.End = session.Start.Add(24 * time.Hour)
+		h.Sink.Collect(ctx, session.SessionEvent(subject.Key()))
+		session = Session{Start: eventTime, End: eventTime}
+		// highlight-end
+	} else {
+		// Just extend the current session
+		session = Session{Start: session.Start, End: eventTime}
+	}
+	// snippet-end: on-event-24h
+
+	sessionState.Set(session)
+	subject.SetTimer(session.End.Add(h.InactivityThreshold))
 	return nil
 }

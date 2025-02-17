@@ -1,0 +1,6 @@
+connectrpc.com/connect v1.18.1/go.mod h1:0292hj1rnx8oFrStN7cB4jjVBeqs+Yx5yDIC2prWDO8=
+github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
+github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
+google.golang.org/protobuf v1.36.3/go.mod h1:9fA7Ob0pmnwhb644+1+CVWFRbNajQ6iRojtC/QF5bRE=
+reduction.dev/reduction-go v0.0.1/go.mod h1:LUN+kBbpk0UBbAv8uAcI5SQiTkpvcgPddYuT4vUjHJ4=
+reduction.dev/reduction-protocol v0.0.0-20250210143955-557cf6435194/go.mod h1:KyA1oRbBT8xidfQGJ7I42VXHF5ebC9CV64I0ni2LRQY=

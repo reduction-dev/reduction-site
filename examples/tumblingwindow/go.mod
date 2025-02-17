@@ -6,6 +6,7 @@ require reduction.dev/reduction-go v0.0.1
 
 require (
 	connectrpc.com/connect v1.18.1 // indirect
+	github.com/stretchr/testify v1.10.0 // indirect
 	google.golang.org/protobuf v1.36.3 // indirect
 	reduction.dev/reduction-protocol v0.0.0-20250210143955-557cf6435194 // indirect
 )

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"reduction.dev/reduction-demos/handlers/tumblingwindow"
 	"reduction.dev/reduction-go/connectors/embedded"
 	"reduction.dev/reduction-go/connectors/memory"
@@ -14,6 +15,7 @@ import (
 )
 
 func TestTumblingWindow(t *testing.T) {
+	// snippet-start: job-setup
 	job := &jobs.Job{}
 	source := embedded.NewSource(job, "Source", &embedded.SourceParams{
 		KeyEvent: tumblingwindow.KeyEvent,
@@ -29,7 +31,9 @@ func TestTumblingWindow(t *testing.T) {
 	})
 	source.Connect(operator)
 	operator.Connect(memorySink)
+	// snippet-end: job-setup
 
+	// snippet-start: test-run
 	tr := rxn.NewTestRun(job)
 	addViewEvent(tr, "channel", "2025-01-01T00:01:00Z")
 	addViewEvent(tr, "channel", "2025-01-01T00:01:30Z")
@@ -38,22 +42,14 @@ func TestTumblingWindow(t *testing.T) {
 	addViewEvent(tr, "channel", "2025-01-01T00:03:01Z")
 	tr.AddWatermark()
 	tr.Run()
+	// snippet-end: test-run
 
-	wantEvents := []tumblingwindow.SumEvent{
+	// snippet-start: assert
+	assert.Equal(t, []tumblingwindow.SumEvent{
 		{ChannelID: "channel", Timestamp: "2025-01-01T00:01:00Z", Sum: 3},
 		{ChannelID: "channel", Timestamp: "2025-01-01T00:02:00Z", Sum: 1},
-	}
-
-	if len(memorySink.Records) != 2 {
-		t.Fatalf("expected 2 records, got %d\nmemorySink.Records: %+v\nwantEvents: %+v", len(memorySink.Records), memorySink.Records, wantEvents)
-	}
-
-	for i, want := range wantEvents {
-		got := memorySink.Records[i]
-		if !reflect.DeepEqual(want, got) {
-			t.Errorf("want %v, got %v", want, got)
-		}
-	}
+	}, memorySink.Records)
+	// snippet-end: assert
 }
 
 func addViewEvent(tr *rxn.TestRunNext, channelID string, timestamp string) {
@@ -65,8 +61,4 @@ type MapStateParams struct {
 	KeyType   reflect.Type
 	ValueType reflect.Type
 	Codec     any
-}
-
-func newMapStateSpec[K comparable, T any](op jobs.Operator, name string, params *MapStateParams) *rxn.MapState[K, T] {
-	return rxn.NewMapState[K, T](name)
 }
