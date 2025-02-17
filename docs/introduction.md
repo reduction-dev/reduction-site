@@ -25,7 +25,7 @@ by Apache Flink, Apache Spark, and Kafka Streams with some key differences:
 * Multi-language support built into the core design
 * An emphasize on familiar primitives and a programming model that scales with
   more complex requirements
-* Zero-dependency deployment with a single pre-built engine binary
+* Deployment of a job manager and workers with a pre-built engine binary
 * Cloud-first storage using S3 and similar object stores
 
 Reduction's architecture has three main components:
