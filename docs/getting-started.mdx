@@ -44,8 +44,8 @@ reduction version ${currentVersion}`}
 Create a new Go project and add the Reduction Go SDK as a dependency. For example:
 
 ```bash
-mkdir my-job && cd my-job
-go mod init my-job
+mkdir myjob && cd myjob
+go mod init myjob
 go get reduction.dev/reduction-go
 ```
 
@@ -60,7 +60,7 @@ running.
 
 ## Running a Job
 
-Try out the high scores job:
+Try out the job:
 
 1. Build the job:
 
@@ -71,7 +71,7 @@ Try out the high scores job:
 2. Run the job with `reduction-dev`:
    
    ```bash
-   reduction dev ./my-job
+   reduction dev ./myjob
    ```
 
 At this point you should see a line printed to the terminal for every 100,000th
