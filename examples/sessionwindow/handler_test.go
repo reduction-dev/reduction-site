@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"sessionwindow"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"reduction.dev/reduction-demos/handlers/sessionwindow"
 	"reduction.dev/reduction-go/connectors/embedded"
 	"reduction.dev/reduction-go/connectors/memory"
 	"reduction.dev/reduction-go/jobs"
@@ -74,6 +75,10 @@ func TestSessionWindow(t *testing.T) {
 }
 
 func addViewEvent(tr *rxn.TestRunNext, userID string, timestamp string) {
-	data, _ := json.Marshal(sessionwindow.ViewEvent{UserID: userID, Timestamp: timestamp})
+	ts, err := time.Parse(time.RFC3339, timestamp)
+	if err != nil {
+		panic(err)
+	}
+	data, _ := json.Marshal(sessionwindow.ViewEvent{UserID: userID, Timestamp: ts})
 	tr.AddRecord(data)
 }

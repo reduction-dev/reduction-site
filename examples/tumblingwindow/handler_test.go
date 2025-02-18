@@ -1,13 +1,13 @@
-package tumblingwindow
+package tumblingwindow_test
 
 import (
 	"encoding/json"
-	"reflect"
 	"testing"
 	"time"
 
+	"tumblingwindow"
+
 	"github.com/stretchr/testify/assert"
-	"reduction.dev/reduction-demos/handlers/tumblingwindow"
 	"reduction.dev/reduction-go/connectors/embedded"
 	"reduction.dev/reduction-go/connectors/memory"
 	"reduction.dev/reduction-go/jobs"
@@ -46,19 +46,22 @@ func TestTumblingWindow(t *testing.T) {
 
 	// snippet-start: assert
 	assert.Equal(t, []tumblingwindow.SumEvent{
-		{ChannelID: "channel", Timestamp: "2025-01-01T00:01:00Z", Sum: 3},
-		{ChannelID: "channel", Timestamp: "2025-01-01T00:02:00Z", Sum: 1},
+		{ChannelID: "channel", Timestamp: mustParseTime("2025-01-01T00:01:00Z"), Sum: 3},
+		{ChannelID: "channel", Timestamp: mustParseTime("2025-01-01T00:02:00Z"), Sum: 1},
 	}, memorySink.Records)
 	// snippet-end: assert
 }
 
 func addViewEvent(tr *rxn.TestRunNext, channelID string, timestamp string) {
-	data, _ := json.Marshal(tumblingwindow.ViewEvent{ChannelID: channelID, Timestamp: timestamp})
+	ts := mustParseTime(timestamp)
+	data, _ := json.Marshal(tumblingwindow.ViewEvent{ChannelID: channelID, Timestamp: ts})
 	tr.AddRecord(data)
 }
 
-type MapStateParams struct {
-	KeyType   reflect.Type
-	ValueType reflect.Type
-	Codec     any
+func mustParseTime(timestamp string) time.Time {
+	ts, err := time.Parse(time.RFC3339, timestamp)
+	if err != nil {
+		panic(err)
+	}
+	return ts
 }

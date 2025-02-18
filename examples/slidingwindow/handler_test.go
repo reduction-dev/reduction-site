@@ -5,8 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"slidingwindow"
+
 	"github.com/stretchr/testify/assert"
-	"reduction.dev/reduction-demos/handlers/slidingwindow"
 	"reduction.dev/reduction-go/connectors/embedded"
 	"reduction.dev/reduction-go/connectors/memory"
 	"reduction.dev/reduction-go/jobs"
@@ -96,6 +97,10 @@ func TestSlidingWindow(t *testing.T) {
 }
 
 func addViewEvent(tr *rxn.TestRunNext, userID string, timestamp string) {
-	data, _ := json.Marshal(slidingwindow.ViewEvent{UserID: userID, Timestamp: timestamp})
+	ts, err := time.Parse(time.RFC3339, timestamp)
+	if err != nil {
+		panic(err)
+	}
+	data, _ := json.Marshal(slidingwindow.ViewEvent{UserID: userID, Timestamp: ts})
 	tr.AddRecord(data)
 }
