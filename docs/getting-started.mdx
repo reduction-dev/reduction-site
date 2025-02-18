@@ -44,9 +44,9 @@ reduction version ${currentVersion}`}
 Create a new Go project and add the Reduction Go SDK as a dependency. For example:
 
 ```bash
-mkdir myjob && cd myjob
+mkdir myjob
+cd myjob
 go mod init myjob
-go get reduction.dev/reduction-go
 ```
 
 ## Author a Job
@@ -62,9 +62,10 @@ running.
 
 Try out the job:
 
-1. Build the job:
+1. Install the dependencies and build the job:
 
    ```bash
+   go mod tidy
    go build
    ```
 
