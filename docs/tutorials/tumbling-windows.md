@@ -104,10 +104,11 @@ And then write the `OnTimerExpired` method to send these events to the sink.
 You may have spotted opportunities for unit test in our handler implementation
 but the most interesting parts of a Reduction job are how the callbacks and
 state mutations work together to produce our final output. We can test how the
-handler will work with a production Reduction cluster by using the `rxn.TestRun`
-utility. This utility invokes the `reduction test` command with a list of test
-events to process with the handler. When all the events have been processed, we
-can inspect an in-memory sink to see what events we would have sent.
+handler will work with a production Reduction cluster by using the
+`topology.TestRun` utility. This utility invokes the `reduction test` command
+with a list of test events to process with the handler. When all the events have
+been processed, we can inspect an in-memory sink to see what events we would
+have sent.
 
 Our Handler's `Sink` member is an interface that allows us to collect our
 `SumEvent` events (`connectors.SinkRuntime[SumEvent]`). When testing we can use

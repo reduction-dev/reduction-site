@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"reduction.dev/reduction-go/connectors"
 	"reduction.dev/reduction-go/rxn"
 )
 
@@ -24,7 +23,7 @@ type SumEvent struct {
 // It emits sum events when a minute window closes.
 type Handler struct {
 	// Sink sends aggregated view counts to the configured destination
-	Sink connectors.SinkRuntime[SumEvent]
+	Sink rxn.Sink[SumEvent]
 	// CountsByMinute stores the running count of views per minute
 	CountsByMinute rxn.MapSpec[time.Time, int]
 }
@@ -54,7 +53,7 @@ func KeyEvent(ctx context.Context, eventData []byte) ([]rxn.KeyedEvent, error) {
 // snippet-end: key-event
 
 // snippet-start: on-event
-func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, event rxn.KeyedEvent) error {
+func (h *Handler) OnEvent(ctx context.Context, subject rxn.Subject, event rxn.KeyedEvent) error {
 	// Load the map state for counts by minute
 	state := h.CountsByMinute.StateFor(subject)
 
@@ -71,7 +70,7 @@ func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, event rxn.K
 // snippet-end: on-event
 
 // snippet-start: on-timer
-func (h *Handler) OnTimerExpired(ctx context.Context, subject *rxn.Subject, timestamp time.Time) error {
+func (h *Handler) OnTimerExpired(ctx context.Context, subject rxn.Subject, timestamp time.Time) error {
 	// Load the map state for counts by minute
 	state := h.CountsByMinute.StateFor(subject)
 

@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"reduction.dev/reduction-go/connectors/stdio"
-	"reduction.dev/reduction-go/jobs"
 	"reduction.dev/reduction-go/rxn"
+	"reduction.dev/reduction-go/topology"
 )
 
 // snippet-start: score-event
@@ -49,7 +49,7 @@ func KeyEvent(ctx context.Context, eventData []byte) ([]rxn.KeyedEvent, error) {
 
 // snippet-start: on-event
 // OnEvent processes each score event and emits when there's a new high score
-func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, keyedEvent rxn.KeyedEvent) error {
+func (h *Handler) OnEvent(ctx context.Context, subject rxn.Subject, keyedEvent rxn.KeyedEvent) error {
 	var event ScoreEvent
 	if err := json.Unmarshal(keyedEvent.Value, &event); err != nil {
 		return err
@@ -75,14 +75,14 @@ func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, keyedEvent 
 // snippet-end: on-event
 
 // OnTimerExpired is not used in this handler
-func (h *Handler) OnTimerExpired(ctx context.Context, subject *rxn.Subject, timestamp time.Time) error {
+func (h *Handler) OnTimerExpired(ctx context.Context, subject rxn.Subject, timestamp time.Time) error {
 	return nil
 }
 
 // snippet-start: main
 func main() {
 	// Configure the job
-	job := &jobs.Job{WorkerCount: 1, WorkingStorageLocation: "storage"}
+	job := &topology.Job{WorkerCount: 1, WorkingStorageLocation: "storage"}
 
 	// Create a source that reads from stdin
 	source := stdio.NewSource(job, "Source", &stdio.SourceParams{
@@ -93,11 +93,11 @@ func main() {
 	// Create a sink that writes to stdout
 	sink := stdio.NewSink(job, "Sink")
 
-	operator := jobs.NewOperator(job, "Operator", &jobs.OperatorParams{
-		Handler: func(op *jobs.Operator) rxn.OperatorHandler {
+	operator := topology.NewOperator(job, "Operator", &topology.OperatorParams{
+		Handler: func(op *topology.Operator) rxn.OperatorHandler {
 			return &Handler{
 				Sink:          sink,
-				HighScoreSpec: rxn.NewValueSpec(op, "highscore", rxn.ScalarCodec[int]{}),
+				HighScoreSpec: topology.NewValueSpec(op, "highscore", rxn.ScalarValueCodec[int]{}),
 			}
 		},
 	})
@@ -105,7 +105,7 @@ func main() {
 	source.Connect(operator)
 	operator.Connect(sink)
 
-	rxn.Run(job)
+	job.Run()
 }
 
 // snippet-end: main

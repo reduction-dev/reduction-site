@@ -8,28 +8,28 @@ import (
 	"reduction.dev/reduction-go/connectors/embedded"
 	"reduction.dev/reduction-go/connectors/memory"
 	"reduction.dev/reduction-go/connectors/stdio"
-	"reduction.dev/reduction-go/jobs"
 	"reduction.dev/reduction-go/rxn"
+	"reduction.dev/reduction-go/topology"
 )
 
 func TestHighScore(t *testing.T) {
-	job := &jobs.Job{}
+	job := &topology.Job{}
 	source := embedded.NewSource(job, "Source", &embedded.SourceParams{
 		KeyEvent: KeyEvent,
 	})
 	memorySink := memory.NewSink[stdio.Event](job, "Sink")
-	operator := jobs.NewOperator(job, "Operator", &jobs.OperatorParams{
-		Handler: func(op *jobs.Operator) rxn.OperatorHandler {
+	operator := topology.NewOperator(job, "Operator", &topology.OperatorParams{
+		Handler: func(op *topology.Operator) rxn.OperatorHandler {
 			return &Handler{
 				Sink:          memorySink,
-				HighScoreSpec: rxn.NewValueSpec(op, "HighScore", rxn.ScalarCodec[int]{}),
+				HighScoreSpec: topology.NewValueSpec(op, "HighScore", rxn.ScalarValueCodec[int]{}),
 			}
 		},
 	})
 	source.Connect(operator)
 	operator.Connect(memorySink)
 
-	tr := rxn.NewTestRun(job)
+	tr := job.NewTestRun()
 
 	// Add some score events for user-1
 	addScoreEvent(tr, "user-1", 100, "2024-01-01T00:01:00Z") // First score - high score
@@ -67,7 +67,7 @@ func TestHighScore(t *testing.T) {
 	}
 }
 
-func addScoreEvent(tr *rxn.TestRunNext, userID string, score int, timestamp string) {
+func addScoreEvent(tr *topology.TestRun, userID string, score int, timestamp string) {
 	ts, _ := time.Parse(time.RFC3339, timestamp)
 	data, _ := json.Marshal(ScoreEvent{
 		UserID:    userID,

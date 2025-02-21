@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"reduction.dev/reduction-go/connectors"
 	"reduction.dev/reduction-go/rxn"
 )
 
@@ -49,7 +48,7 @@ func (s Session) IsZero() bool {
 type SessionCodec struct{}
 
 // DecodeValue returns a Session, interpreting the binary data as two uint64 timestamps
-func (c SessionCodec) DecodeValue(b []byte) (Session, error) {
+func (c SessionCodec) Decode(b []byte) (Session, error) {
 	if len(b) != 16 { // 8 bytes for each uint64
 		return Session{}, fmt.Errorf("invalid session data length: %d", len(b))
 	}
@@ -60,7 +59,7 @@ func (c SessionCodec) DecodeValue(b []byte) (Session, error) {
 }
 
 // EncodeValue returns the binary representation of a Session as two uint64 timestamps
-func (c SessionCodec) EncodeValue(value Session) ([]byte, error) {
+func (c SessionCodec) Encode(value Session) ([]byte, error) {
 	b := make([]byte, 16)
 	binary.BigEndian.PutUint64(b[:8], uint64(value.Start.UTC().UnixNano()))
 	binary.BigEndian.PutUint64(b[8:], uint64(value.End.UTC().UnixNano()))
@@ -69,13 +68,13 @@ func (c SessionCodec) EncodeValue(value Session) ([]byte, error) {
 
 // snippet-end: session-state
 
-// Make sure SessionCodec implements the rxn.ValueStateCodec interface
-var _ rxn.ValueStateCodec[Session] = SessionCodec{}
+// Make sure SessionCodec implements the rxn.ValueCodec interface
+var _ rxn.ValueCodec[Session] = SessionCodec{}
 
 // snippet-start: handler-struct
 // Handler is the session window operator handler
 type Handler struct {
-	Sink                connectors.SinkRuntime[SessionEvent]
+	Sink                rxn.Sink[SessionEvent]
 	SessionSpec         rxn.ValueSpec[Session]
 	InactivityThreshold time.Duration
 }
@@ -98,7 +97,7 @@ func KeyEvent(ctx context.Context, eventData []byte) ([]rxn.KeyedEvent, error) {
 // snippet-end: key-event
 
 // snippet-start: on-event
-func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, event rxn.KeyedEvent) error {
+func (h *Handler) OnEvent(ctx context.Context, subject rxn.Subject, event rxn.KeyedEvent) error {
 	sessionState := h.SessionSpec.StateFor(subject)
 	session := sessionState.Value()
 	eventTime := subject.Timestamp()
@@ -123,7 +122,7 @@ func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, event rxn.K
 // snippet-end: on-event
 
 // snippet-start: on-timer
-func (h *Handler) OnTimerExpired(ctx context.Context, subject *rxn.Subject, timestamp time.Time) error {
+func (h *Handler) OnTimerExpired(ctx context.Context, subject rxn.Subject, timestamp time.Time) error {
 	sessionState := h.SessionSpec.StateFor(subject)
 	session := sessionState.Value()
 
@@ -137,7 +136,7 @@ func (h *Handler) OnTimerExpired(ctx context.Context, subject *rxn.Subject, time
 
 // snippet-end: on-timer
 
-func (h *Handler) OnEvent24h(ctx context.Context, subject *rxn.Subject, event rxn.KeyedEvent) error {
+func (h *Handler) OnEvent24h(ctx context.Context, subject rxn.Subject, event rxn.KeyedEvent) error {
 	sessionState := h.SessionSpec.StateFor(subject)
 	session := sessionState.Value()
 	eventTime := subject.Timestamp()

@@ -11,22 +11,22 @@ import (
 	"github.com/stretchr/testify/require"
 	"reduction.dev/reduction-go/connectors/embedded"
 	"reduction.dev/reduction-go/connectors/memory"
-	"reduction.dev/reduction-go/jobs"
 	"reduction.dev/reduction-go/rxn"
+	"reduction.dev/reduction-go/topology"
 )
 
 func TestSessionWindow(t *testing.T) {
 	// snippet-start: job-setup
-	job := &jobs.Job{}
+	job := &topology.Job{}
 	source := embedded.NewSource(job, "Source", &embedded.SourceParams{
 		KeyEvent: sessionwindow.KeyEvent,
 	})
 	memorySink := memory.NewSink[sessionwindow.SessionEvent](job, "Sink")
-	operator := jobs.NewOperator(job, "Operator", &jobs.OperatorParams{
-		Handler: func(op *jobs.Operator) rxn.OperatorHandler {
+	operator := topology.NewOperator(job, "Operator", &topology.OperatorParams{
+		Handler: func(op *topology.Operator) rxn.OperatorHandler {
 			return &sessionwindow.Handler{
 				Sink:                memorySink,
-				SessionSpec:         rxn.NewValueSpec(op, "Session", sessionwindow.SessionCodec{}),
+				SessionSpec:         topology.NewValueSpec(op, "Session", sessionwindow.SessionCodec{}),
 				InactivityThreshold: 15 * time.Minute,
 			}
 		},
@@ -36,7 +36,7 @@ func TestSessionWindow(t *testing.T) {
 	// snippet-end: job-setup
 
 	// snippet-start: test-run
-	tr := rxn.NewTestRun(job)
+	tr := job.NewTestRun()
 
 	// First session with events close together
 	addViewEvent(tr, "user", "2025-01-01T00:01:00Z")
@@ -74,7 +74,7 @@ func TestSessionWindow(t *testing.T) {
 	// snippet-end: assert
 }
 
-func addViewEvent(tr *rxn.TestRunNext, userID string, timestamp string) {
+func addViewEvent(tr *topology.TestRun, userID string, timestamp string) {
 	ts, err := time.Parse(time.RFC3339, timestamp)
 	if err != nil {
 		panic(err)

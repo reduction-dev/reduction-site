@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"reduction.dev/reduction-go/connectors"
 	"reduction.dev/reduction-go/rxn"
 )
 
@@ -44,7 +43,7 @@ func KeyEvent(ctx context.Context, eventData []byte) ([]rxn.KeyedEvent, error) {
 
 // snippet-start: handler
 type Handler struct {
-	Sink                  connectors.SinkRuntime[SumEvent]
+	Sink                  rxn.Sink[SumEvent]
 	CountsByMinuteSpec    rxn.MapSpec[time.Time, int]
 	PreviousWindowSumSpec rxn.ValueSpec[int]
 }
@@ -52,7 +51,7 @@ type Handler struct {
 // snippet-end: handler
 
 // snippet-start: on-event
-func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, event rxn.KeyedEvent) error {
+func (h *Handler) OnEvent(ctx context.Context, subject rxn.Subject, event rxn.KeyedEvent) error {
 	// Load the map state for counts by minute
 	counts := h.CountsByMinuteSpec.StateFor(subject)
 
@@ -69,7 +68,7 @@ func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, event rxn.K
 // snippet-end: on-event
 
 // snippet-start: on-timer
-func (h *Handler) OnTimerExpired(ctx context.Context, subject *rxn.Subject, timestamp time.Time) error {
+func (h *Handler) OnTimerExpired(ctx context.Context, subject rxn.Subject, timestamp time.Time) error {
 	// Load the map state for counts by minute
 	counts := h.CountsByMinuteSpec.StateFor(subject)
 
@@ -97,13 +96,12 @@ func (h *Handler) OnTimerExpired(ctx context.Context, subject *rxn.Subject, time
 			TotalViews: windowSum,
 		})
 		prevWindowSum.Set(windowSum)
-		subject.UpdateState(prevWindowSum)
 	}
 
 	// Set a timer to emit future windows in case the user gets no more view events
 	// highlight-start
 	if counts.Size() > 0 {
-		subject.SetTimer(rxn.CurrentWatermark(ctx).Truncate(time.Minute).Add(time.Minute))
+		subject.SetTimer(subject.Watermark().Truncate(time.Minute).Add(time.Minute))
 	}
 	// highlight-end
 	return nil

@@ -10,23 +10,23 @@ import (
 	"github.com/stretchr/testify/assert"
 	"reduction.dev/reduction-go/connectors/embedded"
 	"reduction.dev/reduction-go/connectors/memory"
-	"reduction.dev/reduction-go/jobs"
 	"reduction.dev/reduction-go/rxn"
+	"reduction.dev/reduction-go/topology"
 )
 
 func TestSlidingWindow(t *testing.T) {
 	// snippet-start: job-setup
-	job := &jobs.Job{}
+	job := &topology.Job{}
 	source := embedded.NewSource(job, "Source", &embedded.SourceParams{
 		KeyEvent: slidingwindow.KeyEvent,
 	})
 	memorySink := memory.NewSink[slidingwindow.SumEvent](job, "Sink")
-	operator := jobs.NewOperator(job, "Operator", &jobs.OperatorParams{
-		Handler: func(op *jobs.Operator) rxn.OperatorHandler {
+	operator := topology.NewOperator(job, "Operator", &topology.OperatorParams{
+		Handler: func(op *topology.Operator) rxn.OperatorHandler {
 			return &slidingwindow.Handler{
 				Sink:                  memorySink,
-				CountsByMinuteSpec:    rxn.NewMapSpec(op, "CountsByMinute", rxn.ScalarMapStateCodec[time.Time, int]{}),
-				PreviousWindowSumSpec: rxn.NewValueSpec(op, "PreviousWindowSum", rxn.ScalarCodec[int]{}),
+				CountsByMinuteSpec:    topology.NewMapSpec(op, "CountsByMinute", rxn.ScalarMapCodec[time.Time, int]{}),
+				PreviousWindowSumSpec: topology.NewValueSpec(op, "PreviousWindowSum", rxn.ScalarValueCodec[int]{}),
 			}
 		},
 	})
@@ -35,7 +35,7 @@ func TestSlidingWindow(t *testing.T) {
 	// snippet-end: job-setup
 
 	// snippet-start: test-run
-	tr := rxn.NewTestRun(job)
+	tr := job.NewTestRun()
 
 	/* Events for user accumulate */
 
@@ -96,7 +96,7 @@ func TestSlidingWindow(t *testing.T) {
 	// snippet-end: assert
 }
 
-func addViewEvent(tr *rxn.TestRunNext, userID string, timestamp string) {
+func addViewEvent(tr *topology.TestRun, userID string, timestamp string) {
 	ts, err := time.Parse(time.RFC3339, timestamp)
 	if err != nil {
 		panic(err)

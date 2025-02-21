@@ -7,8 +7,8 @@ import (
 
 	"reduction.dev/reduction-go/connectors/embedded"
 	"reduction.dev/reduction-go/connectors/stdio"
-	"reduction.dev/reduction-go/jobs"
 	"reduction.dev/reduction-go/rxn"
+	"reduction.dev/reduction-go/topology"
 )
 
 type Handler struct {
@@ -17,7 +17,7 @@ type Handler struct {
 }
 
 // Count each event that arrives and send a message to the sink every 100,000 events.
-func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, event rxn.KeyedEvent) error {
+func (h *Handler) OnEvent(ctx context.Context, subject rxn.Subject, event rxn.KeyedEvent) error {
 	count := h.countSpec.StateFor(subject)
 	count.Set(count.Value() + 1)
 	if count.Value()%100_000 == 0 {
@@ -26,13 +26,13 @@ func (h *Handler) OnEvent(ctx context.Context, subject *rxn.Subject, event rxn.K
 	return nil
 }
 
-func (h *Handler) OnTimerExpired(ctx context.Context, subject *rxn.Subject, timestamp time.Time) error {
+func (h *Handler) OnTimerExpired(ctx context.Context, subject rxn.Subject, timestamp time.Time) error {
 	panic("timers not used")
 }
 
 func main() {
 	// Configure the job
-	job := &jobs.Job{
+	job := &topology.Job{
 		WorkerCount:            1,
 		WorkingStorageLocation: "storage",
 	}
@@ -43,14 +43,14 @@ func main() {
 			return []rxn.KeyedEvent{{}}, nil
 		},
 	})
-	operator := jobs.NewOperator(job, "Operator", &jobs.OperatorParams{
-		Handler: func(op *jobs.Operator) rxn.OperatorHandler {
-			count := rxn.NewValueSpec(op, "Count", rxn.ScalarCodec[int]{})
+	operator := topology.NewOperator(job, "Operator", &topology.OperatorParams{
+		Handler: func(op *topology.Operator) rxn.OperatorHandler {
+			count := topology.NewValueSpec(op, "Count", rxn.ScalarValueCodec[int]{})
 			return &Handler{sink: sink, countSpec: count}
 		},
 	})
 	source.Connect(operator)
 	operator.Connect(sink)
 
-	rxn.Run(job)
+	job.Run()
 }
