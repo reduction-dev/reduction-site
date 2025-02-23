@@ -38,7 +38,7 @@ func main() {
 	}
 	sink := stdio.NewSink(job, "Sink")
 	source := embedded.NewSource(job, "Source", &embedded.SourceParams{
-		Generator: "inc_nums",
+		Generator: embedded.GeneratorSequence,
 		KeyEvent: func(ctx context.Context, record []byte) ([]rxn.KeyedEvent, error) {
 			return []rxn.KeyedEvent{{}}, nil
 		},
