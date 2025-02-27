@@ -23,7 +23,7 @@ by Apache Flink, Apache Spark, and Kafka Streams with some key differences:
 
 * Separation of the stream engine and processing logic through a client-server architecture
 * Multi-language support built into the core design
-* An emphasize on familiar primitives and a programming model that scales with
+* An emphasis on familiar primitives and a programming model that scales with
   more complex requirements
 * Deployment of a job manager and workers with a pre-built engine binary
 * Cloud-first storage using S3 and similar object stores
