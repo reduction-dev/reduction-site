@@ -87,10 +87,10 @@ With instant feedback on every editor keystroke and reproducible builds in the C
 engineering workflows have become undeniably good. AI coding agents only
 accelerate the pull of processes into these workflows.
 
-## The Data Silo
+## Data Engineering
 
 While engineering teams can own their infrastructure, UI, and backend code, data
-engineering remains stubbornly siloed. If AI coding agents live up to their
+engineering remains difficult to integrate. If AI coding agents live up to their
 promises, we're likely to see smaller teams own larger software projects and all
 the resulting data challenges associated with that:
 
