@@ -1,6 +1,7 @@
 {
   "name": "reduction-site",
   "version": "0.0.0",
+  "workspaces": ["examples/ts/*"],
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",

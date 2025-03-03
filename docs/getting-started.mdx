@@ -7,6 +7,9 @@ import { DownloadLinks } from '@site/src/components/DownloadLinks';
 import { currentVersion } from '@site/src/constants';
 import CodeBlock from '@theme/CodeBlock';
 import quickStartMain from '!!raw-loader!@site/examples/quickstart/main.go';
+import quickStartTypeScript from '!!raw-loader!@site/examples/ts/quickstart/index.ts';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Getting Started
 
@@ -41,13 +44,25 @@ reduction version ${currentVersion}`}
 
 ## Setup
 
-Create a new Go project and add the Reduction Go SDK as a dependency. For example:
+Create a new project and add the Reduction Go SDK as a dependency. For example:
 
-```bash
-mkdir myjob
-cd myjob
-go mod init myjob
-```
+<Tabs groupId="language">
+   <TabItem value="go" label="Go">
+      ```bash
+      mkdir myjob
+      cd myjob
+      go mod init myjob
+      ```
+   </TabItem>
+   <TabItem value="typescript" label="TypeScript">
+      ```bash
+      mkdir myjob
+      cd myjob
+      bun init # choose "blank"
+      bun add reduction-ts
+      ```
+   </TabItem>
+</Tabs>
 
 ## Author a Job
 
@@ -56,24 +71,41 @@ incrementing numbers and prints to stdout every 100,000th event it processes.
 Don't worry about the specifics of the job code yet, let's just get something
 running.
 
-<CodeBlock language="go" title="myjob/main.go">{quickStartMain}</CodeBlock>
+<Tabs>
+   <TabItem value="go" label="Go">
+      <CodeBlock language="go" title="myjob/main.go">{quickStartMain}</CodeBlock>
+   </TabItem>
+   <TabItem value="typescript" label="TypeScript">
+      <CodeBlock language="go" title="myjob/index.ts">{quickStartTypeScript}</CodeBlock>
+   </TabItem>
+</Tabs>
 
 ## Running a Job
 
 Try out the job:
 
-1. Install the dependencies and build the job:
+1. Build your job as an executable:
 
+<Tabs groupId="language">
+   <TabItem value="go" label="Go">
    ```bash
    go mod tidy
    go build
    ```
+   </TabItem>
+   <TabItem value="typescript" label="TypeScript">
+   ```bash
+   bun build --compile --outfile=myjob index.ts
+   ```
+   </TabItem>
+</Tabs>
+
 
 2. Run the job with `reduction-dev`:
    
-   ```bash
-   reduction dev ./myjob
-   ```
+```bash
+reduction dev ./myjob
+```
 
 At this point you should see a line printed to the terminal for every 100,000th
 event processed.
