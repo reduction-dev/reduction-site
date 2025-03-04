@@ -1,24 +1,15 @@
-import type { KeyedEvent, OperatorHandler, Sink, Subject } from "reduction-ts";
-import {
-  ScalarMapCodec,
-  TimestampValueCodec,
-  Uint64ValueCodec
-} from "reduction-ts/state";
+import type { KeyedEvent, OperatorHandler, Subject } from "reduction-ts";
 import * as topology from "reduction-ts/topology";
 
+// snippet-start: view-event
 // The ViewEvent represents a user viewing a channel
 export interface ViewEvent {
   channelId: string;
   timestamp: Date;
 }
+// snippet-end: view-event
 
-// The SumEvent is the total number of views for a channel over a time interval
-export interface SumEvent {
-  channelId: string;
-  timestamp: Date;
-  sum: number;
-}
-
+// snippet-start: key-event
 // KeyEvent takes the raw data from our source and returns events with timestamps and keys
 export function keyEvent(eventData: Uint8Array): KeyedEvent[] {
   const event: ViewEvent = JSON.parse(eventData.toString());
@@ -31,30 +22,39 @@ export function keyEvent(eventData: Uint8Array): KeyedEvent[] {
     },
   ];
 }
+// snippet-end: key-event
 
-// Handler processes view events and maintains counts per minute for each channel.
-// It emits sum events when a minute window closes.
+// snippet-start: handler
+// The SumEvent is the total number of views for a channel over a time interval
+export interface SumEvent {
+  channelId: string;
+  timestamp: Date;
+  sum: number;
+}
+
+/**
+ * Handler processes view events and maintains counts per minute for each channel.
+ */
 export class Handler implements OperatorHandler {
-  private sink: Sink<SumEvent>;
-  private countsByMinute: topology.MapSpec<Date, number>;
+  private sink: topology.Sink<SumEvent>;
+  private countsByMinuteSpec: topology.MapSpec<Date, number>;
 
-  constructor(op: topology.Operator, sink: Sink<SumEvent>) {
+  constructor(countSpec: topology.MapSpec<Date, number>, sink: topology.Sink<SumEvent>) {
     this.sink = sink;
-    this.countsByMinute = new topology.MapSpec<Date, number>(
-      op,
-      "CountsByMinute",
-      new ScalarMapCodec(new TimestampValueCodec(), new Uint64ValueCodec())
-    );
+    this.countsByMinuteSpec = countSpec;
   }
+// snippet-end: handler
 
+  // snippet-start: on-event
   onEvent(subject: Subject, event: KeyedEvent): void {
     // Load the map state for counts by minute
-    const state = this.countsByMinute.stateFor(subject);
+    const state = this.countsByMinuteSpec.stateFor(subject);
 
     // Truncate to minute (set seconds and milliseconds to 0)
     const minute = event.timestamp;
     minute.setSeconds(0, 0);
 
+    // Increment the count
     const currentCount = state.get(minute) ?? 0;
     state.set(minute, currentCount + 1);
 
@@ -63,10 +63,12 @@ export class Handler implements OperatorHandler {
     nextMinute.setMinutes(minute.getMinutes() + 1);
     subject.setTimer(nextMinute);
   }
+  // snippet-end: on-event
 
+  // snippet-start: on-timer
   onTimerExpired(subject: Subject, timer: Date): void {
     // Load the map state for counts by minute
-    const state = this.countsByMinute.stateFor(subject);
+    const state = this.countsByMinuteSpec.stateFor(subject);
 
     // Emit the sums for every earlier minute bucket
     for (const [minute, sum] of state.entries()) {
@@ -83,4 +85,5 @@ export class Handler implements OperatorHandler {
       }
     }
   }
+  // snippet-end: on-timer
 }

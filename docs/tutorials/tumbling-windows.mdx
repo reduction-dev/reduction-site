@@ -4,7 +4,11 @@ sidebar_position: 1
 
 import CodeSnippet from '@site/src/components/CodeSnippet';
 import tumblingWindowHandler from '!!raw-loader!@site/examples/tumblingwindow/handler.go';
+import tumblingWindowHandlerTypeScript from '!!raw-loader!@site/examples/ts/tumbling-window/index.ts';
 import tumblingWindowTest from '!!raw-loader!@site/examples/tumblingwindow/handler_test.go';
+import tumblingWindowTestTypeScript from '!!raw-loader!@site/examples/ts/tumbling-window/index.test.ts';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Tumbling Windows
 
@@ -56,14 +60,24 @@ subject key from an event and return a `KeyedEvent` type. Reduction uses the
 uses the key to partition events between the operators that it manages
 internally.
 
-<CodeSnippet language="go" code={tumblingWindowHandler} marker="key-event" />
+<Tabs groupId="language">
+  <TabItem value="go" label="Go">
+    <CodeSnippet language="go" code={tumblingWindowHandler} marker="key-event" />
+  </TabItem>
+  <TabItem value="typescript" label="TypeScript">
+    <CodeSnippet language="typescript" code={tumblingWindowHandlerTypeScript} marker="key-event" />
+  </TabItem>
+</Tabs>
 
-## Processing Each Event
+## Instantiating the Operator Handler
 
-As Reduction processes the view events, it will call the handler's `OnEvent`
-method for each event to give us an opportunity to store state and trigger
-timers. In this case we'll want to store the sum of events by minute in a map
-and set a timer to trigger when a minute is over.
+We define State Specs and Sinks when configuring the job and then pass them to
+the Operator Handler. The handler uses these predefined State Specs and Sinks at
+runtime.
+
+To store the state of our tumbling window we'll give our handler a Map Spec
+where the keys are are timestamps rounded down to the nearest minute and the
+values are the sum of view events for that minute.
 
 :::tip[Why do we need a map?]
 You may wonder why we need to store events by minute rather than just storing a
@@ -74,30 +88,51 @@ may fire. This is similar to timers in programming languages like Go
 arrive before the timer fires for the previous minute.
 :::
 
-Each supported language has state specs to handle converting our types to a
-binary format and back according to a provided codec (coder/decoder). For a map
-of timestamps to integers, we can use the `MapSpec` type.
+We'll also define a `SumEvent` type that we'll use to collect the results of
+each tumbling window.
 
-<CodeSnippet language="go" code={tumblingWindowHandler} marker="handler" />
+<Tabs groupId="language">
+  <TabItem value="go" label="Go">
+    <CodeSnippet language="go" code={tumblingWindowHandler} marker="handler" />
+  </TabItem>
+  <TabItem value="typescript" label="TypeScript">
+    <CodeSnippet language="typescript" code={tumblingWindowHandlerTypeScript} marker="handler" />
+  </TabItem>
+</Tabs>
+
+## Processing Events
+
+As Reduction processes the view events, it will call the handler's `OnEvent`
+method for each event to give us an opportunity to store state, set timers, or
+collect new events. 
 
 In our handler's `OnEvent` method we'll load the state, increment
 the sum for the event's minute (rounding down), and set a timer
 to fire on the next minute.
 
-<CodeSnippet language="go" code={tumblingWindowHandler} marker="on-event" />
+<Tabs groupId="language">
+  <TabItem value="go" label="Go">
+    <CodeSnippet language="go" code={tumblingWindowHandler} marker="on-event" />
+  </TabItem>
+  <TabItem value="typescript" label="TypeScript">
+    <CodeSnippet language="typescript" code={tumblingWindowHandlerTypeScript} marker="on-event" />
+  </TabItem>
+</Tabs>
 
 ## Processing Timers
 
-When a timer fires, we'll send the sum value to our sink and remove the obsolete
-minute bucket from our map.
+When a timer elapses, we'll send the sum value to our sink and remove the
+obsolete minute bucket from our map. Reduction calls the `OnTimerExpired` method
+when a a timer expires.
 
-Let's create an object to handle the JSON serialization.
-
-<CodeSnippet language="go" code={tumblingWindowHandler} marker="sum-event" />
-
-And then write the `OnTimerExpired` method to send these events to the sink.
-
-<CodeSnippet language="go" code={tumblingWindowHandler} marker="on-timer" />
+<Tabs groupId="language">
+  <TabItem value="go" label="Go">
+    <CodeSnippet language="go" code={tumblingWindowHandler} marker="on-timer" />
+  </TabItem>
+  <TabItem value="typescript" label="TypeScript">
+    <CodeSnippet language="typescript" code={tumblingWindowHandlerTypeScript} marker="on-timer" />
+  </TabItem>
+</Tabs>
 
 ## Testing
 
@@ -105,7 +140,7 @@ You may have spotted opportunities for unit test in our handler implementation
 but the most interesting parts of a Reduction job are how the callbacks and
 state mutations work together to produce our final output. We can test how the
 handler will work with a production Reduction cluster by using the
-`topology.TestRun` utility. This utility invokes the `reduction test` command
+`topology.TestRun` utility. This utility invokes the `reduction testrun` command
 with a list of test events to process with the handler. When all the events have
 been processed, we can inspect an in-memory sink to see what events we would
 have sent.
@@ -113,14 +148,30 @@ have sent.
 Our Handler's `Sink` member is an interface that allows us to collect our
 `SumEvent` events (`connectors.SinkRuntime[SumEvent]`). When testing we can use
 Reduction's memory sink type to record sink events rather than having the
-cluster handle them. Let's start the test by setting up our job.
+cluster handle them. 
 
-<CodeSnippet language="go" code={tumblingWindowTest} marker="job-setup" />
+Let's start the test by setting up our job:
+
+<Tabs groupId="language">
+  <TabItem value="go" label="Go">
+    <CodeSnippet language="go" code={tumblingWindowTest} marker="job-setup" />
+  </TabItem>
+  <TabItem value="typescript" label="TypeScript">
+    <CodeSnippet language="typescript" code={tumblingWindowTestTypeScript} marker="job-setup" />
+  </TabItem>
+</Tabs>
 
 In our "test run" we'll add a some view events for a channel and advance the
 watermark.
 
-<CodeSnippet language="go" code={tumblingWindowTest} marker="test-run" />
+<Tabs groupId="language">
+  <TabItem value="go" label="Go">
+    <CodeSnippet language="go" code={tumblingWindowTest} marker="test-run" />
+  </TabItem>
+  <TabItem value="typescript" label="TypeScript">
+    <CodeSnippet language="typescript" code={tumblingWindowTestTypeScript} marker="test-run" />
+  </TabItem>
+</Tabs>
 
 :::tip[Advancing the Watermark]
 In stream processing, a watermark indicates that all events up to a certain
@@ -128,9 +179,16 @@ timestamp have been processed. When we advance the watermark in testing, we're
 simulating the passage of time and allowing timers to fire.
 :::
 
-And then we check the memory sink for the events we expect to have been emitted.
+Then we check the memory sink for the events we expect to have been emitted.
 
-<CodeSnippet language="go" code={tumblingWindowTest} marker="assert" />
+<Tabs groupId="language">
+  <TabItem value="go" label="Go">
+    <CodeSnippet language="go" code={tumblingWindowTest} marker="assert" />
+  </TabItem>
+  <TabItem value="typescript" label="TypeScript">
+    <CodeSnippet language="typescript" code={tumblingWindowTestTypeScript} marker="assert" />
+  </TabItem>
+</Tabs>
 
 You might wonder why we get a closed window for minute 2 but not minute 3 in
 this test. The window for minute three is still open because, according to event

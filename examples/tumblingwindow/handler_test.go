@@ -34,13 +34,20 @@ func TestTumblingWindow(t *testing.T) {
 	// snippet-end: job-setup
 
 	// snippet-start: test-run
+	// Setup test run
 	tr := job.NewTestRun()
+
+	// Add view events
 	addViewEvent(tr, "channel", "2025-01-01T00:01:00Z")
 	addViewEvent(tr, "channel", "2025-01-01T00:01:30Z")
 	addViewEvent(tr, "channel", "2025-01-01T00:01:59Z")
 	addViewEvent(tr, "channel", "2025-01-01T00:02:10Z")
 	addViewEvent(tr, "channel", "2025-01-01T00:03:01Z")
+
+	// Add watermark to let time advance
 	tr.AddWatermark()
+
+	// Run the test
 	tr.Run()
 	// snippet-end: test-run
 

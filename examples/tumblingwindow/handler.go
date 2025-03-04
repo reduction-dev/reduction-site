@@ -8,7 +8,7 @@ import (
 	"reduction.dev/reduction-go/rxn"
 )
 
-// snippet-start: sum-event
+// snippet-start: handler
 // The SumEvent is the total number of views for a channel over a time interval
 type SumEvent struct {
 	ChannelID string    `json:"channel_id"`
@@ -16,9 +16,6 @@ type SumEvent struct {
 	Sum       int       `json:"sum"`
 }
 
-// snippet-end: sum-event
-
-// snippet-start: handler
 // Handler processes view events and maintains counts per minute for each channel.
 // It emits sum events when a minute window closes.
 type Handler struct {
