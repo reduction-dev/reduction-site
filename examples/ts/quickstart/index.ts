@@ -25,7 +25,7 @@ function createHandler(op: topology.Operator, sink: stdio.Sink) {
 
 const job = new topology.Job({
   workerCount: 1,
-  workingStorageLocation: "storage",
+  workingStorageLocation: "dkv-storage",
 });
 new embedded.Source(job, "source", {
   keyEvent: () => [{
