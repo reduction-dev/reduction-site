@@ -1,11 +1,11 @@
 import * as topology from "reduction-ts/topology";
 import * as embedded from "reduction-ts/connectors/embedded";
 import * as stdio from "reduction-ts/connectors/stdio";
-import { UInt64Codec } from "reduction-ts/state";
+import { Uint64ValueCodec } from "reduction-ts/state";
 import type { KeyedEvent, Subject } from "reduction-ts";
 
 function createHandler(op: topology.Operator, sink: stdio.Sink) {
-  const countSpec = new topology.ValueSpec<number>(op, "count", new UInt64Codec(), 0);
+  const countSpec = new topology.ValueSpec<number>(op, "count", new Uint64ValueCodec(), 0);
 
   function onEvent(subject: Subject, event: KeyedEvent) {
     const count = countSpec.stateFor(subject);
