@@ -5,6 +5,10 @@ sidebar_position: 2
 import CodeSnippet from '@site/src/components/CodeSnippet';
 import slidingWindowHandler from '!!raw-loader!@site/examples/slidingwindow/handler.go';
 import slidingWindowTest from '!!raw-loader!@site/examples/slidingwindow/handler_test.go';
+import handlerTypeScript from '!!raw-loader!@site/examples/ts/sliding-window/index.ts';
+import handlerTestTypeScript from '!!raw-loader!@site/examples/ts/sliding-window/index.test.ts';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Sliding Windows
 
@@ -71,27 +75,53 @@ And our goal is to emit a new event with the weekly sum every minute:
 First we'll make a function to transform our JSON page view events into
 Reduction's `KeyedEvent` type.
 
-<CodeSnippet language="go" code={slidingWindowHandler} marker="key-event" />
+<Tabs groupId="language">
+  <TabItem value="go" label="Go">
+    <CodeSnippet language="go" code={slidingWindowHandler} marker="key-event" />
+  </TabItem>
+  <TabItem value="typescript" label="TypeScript">
+    <CodeSnippet language="typescript" code={handlerTypeScript} marker="key-event" />
+  </TabItem>
+</Tabs>
+
+## Creating the Operator Handler
+
+For this handler's state, we'll store the sum of the page views by minute in a
+map. We'll also store the previous sum window's sum so that we can avoid
+emitting events if the sum hasn't changed between windows.
+
+Our sink will take a `SumEvent` type to collect the results of each window.
+
+<Tabs groupId="language">
+  <TabItem value="go" label="Go">
+    <CodeSnippet language="go" code={slidingWindowHandler} marker="handler" />
+  </TabItem>
+  <TabItem value="typescript" label="TypeScript">
+    <CodeSnippet language="typescript" code={handlerTypeScript} marker="handler" />
+  </TabItem>
+</Tabs>
 
 ## Processing Each Event
 
-In the `OnEvent` method of our operator we'll store state in a map where the
-keys are timestamps truncated to the minute and the values are the sums for each
-minute. We'll also track the previous window sum to only emit when it changes.
+In `OnEvent` we'll load the map state, increment the sum for the event's minute,
+and set a timer to fire on the next minute.
 
-<CodeSnippet language="go" code={slidingWindowHandler} marker="handler" />
+<Tabs groupId="language">
+  <TabItem value="go" label="Go">
+    <CodeSnippet language="go" code={slidingWindowHandler} marker="on-event" />
+  </TabItem>
+  <TabItem value="typescript" label="TypeScript">
+    <CodeSnippet language="typescript" code={handlerTypeScript} marker="on-event" />
+  </TabItem>
+</Tabs>
 
-Then in `OnEvent` we'll load the map state, increment the sum for the event's
-minute, and set a timer to fire on the next minute.
-
-<CodeSnippet language="go" code={slidingWindowHandler} marker="on-event" />
-
-So whenever an event comes in, we'll set a timer for the next minute. But we
-also need to consider what happens when the events stop for this user. We still
-need to collect new data as the windows continue to slide and the total number
-of events decreases. We could set a timer for every future sliding window this
-event will be part of but for our use case we can minimize the number of timers
-using the `OnTimerExpired` method.
+So whenever an event comes in, we'll set a timer for the next minute. This works
+as long as we have a steady stream of events invoking the `OnEvent` method for
+this key but we also need to consider what happens when the events stop for this
+user. We still need to collect new data as the windows continue to slide and the
+total number of events decreases. We could set a timer for every future sliding
+window this event will be part of but for our use case we can minimize the
+number of timers by setting a timer in the `OnTimerExpired` method.
 
 ## Processing Timers
 
@@ -99,13 +129,16 @@ When a timer fires, we'll sum all buckets relevant for the current window,
 remove any obsolete minute buckets from our map, and only emit when the total
 changes.
 
-First let's create an object for the new JSON event we want to send to our sink.
+Let's write the `OnTimerExpired` method to send these events:
 
-<CodeSnippet language="go" code={slidingWindowHandler} marker="sum-event" />
-
-Next, let's write the `OnTimerExpired` method to send these events.
-
-<CodeSnippet language="go" code={slidingWindowHandler} marker="on-timer" />
+<Tabs groupId="language">
+  <TabItem value="go" label="Go">
+    <CodeSnippet language="go" code={slidingWindowHandler} marker="on-timer" />
+  </TabItem>
+  <TabItem value="typescript" label="TypeScript">
+    <CodeSnippet language="typescript" code={handlerTypeScript} marker="on-timer" />
+  </TabItem>
+</Tabs>
 
 One optimization here (highlighted) is that we only set another timer when there
 is some value in the window. When there's no data in the map, we can rely on any
@@ -129,13 +162,30 @@ all the earlier events. That moving threshold is the watermark.
 For our testing we can use the `TestRun` utility to get the results of running
 our handler against a set of ViewEvents.
 
-First we set up our job with a source, sink, and operator with our handler:
+We'll set up our job with a source, sink, and operator with our handler. This
+is where we configure the two State Specs:
+* `countsByMinute`: Map Spec of timestamps to counts
+* `previousWindowSum`: Value Spec for a number
 
-<CodeSnippet language="go" code={slidingWindowTest} marker="job-setup" />
+<Tabs groupId="language">
+  <TabItem value="go" label="Go">
+    <CodeSnippet language="go" code={slidingWindowTest} marker="job-setup" />
+  </TabItem>
+  <TabItem value="typescript" label="TypeScript">
+    <CodeSnippet language="typescript" code={handlerTestTypeScript} marker="job-setup" />
+  </TabItem>
+</Tabs>
 
 Then we set up our test run with a series of ViewEvents to process.
 
-<CodeSnippet language="go" code={slidingWindowTest} marker="test-run" />
+<Tabs groupId="language">
+  <TabItem value="go" label="Go">
+    <CodeSnippet language="go" code={slidingWindowTest} marker="test-run" />
+  </TabItem>
+  <TabItem value="typescript" label="TypeScript">
+    <CodeSnippet language="typescript" code={handlerTestTypeScript} marker="test-run" />
+  </TabItem>
+</Tabs>
 
 The use of events with another key ("other-user") and the watermarks demonstrate
 how event time and watermarks progress in the absence of events for "user". Other
@@ -144,7 +194,14 @@ allow relevant timers to fire.
 
 Finally we can assert on the events in the `memorySink`.
 
-<CodeSnippet language="go" code={slidingWindowTest} marker="assert" />
+<Tabs groupId="language">
+  <TabItem value="go" label="Go">
+    <CodeSnippet language="go" code={slidingWindowTest} marker="assert" />
+  </TabItem>
+  <TabItem value="typescript" label="TypeScript">
+    <CodeSnippet language="typescript" code={handlerTestTypeScript} marker="assert" />
+  </TabItem>
+</Tabs>
 
 ## Wrapping Up
 

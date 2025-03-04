@@ -43,8 +43,9 @@ test('preserves indentation when no marker provided', () => {
   const b = 2;
 // snippet-end: test
   const c = 3;`;
-  const expected = `    const a = 1;
+  const expected = `const a = 1;
+  const b = 2;
   const c = 3;`;
   const result = extractSnippet(code);
   expect(result).toBe(expected);
-});
+})

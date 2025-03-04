@@ -8,18 +8,7 @@ import (
 	"reduction.dev/reduction-go/rxn"
 )
 
-// snippet-start: sum-event
-// SumEvent represents the sum of views for a user over a time interval
-type SumEvent struct {
-	UserID     string `json:"user_id"`
-	Interval   string `json:"interval"`
-	TotalViews int    `json:"total_views"`
-}
-
-// snippet-end: sum-event
-
 // snippet-start: key-event
-
 // ViewEvent represents a user viewing a page
 type ViewEvent struct {
 	UserID    string    `json:"user_id"`
@@ -42,6 +31,13 @@ func KeyEvent(ctx context.Context, eventData []byte) ([]rxn.KeyedEvent, error) {
 // snippet-end: key-event
 
 // snippet-start: handler
+// SumEvent represents the sum of views for a user over a time interval
+type SumEvent struct {
+	UserID     string `json:"user_id"`
+	Interval   string `json:"interval"`
+	TotalViews int    `json:"total_views"`
+}
+
 type Handler struct {
 	Sink                  rxn.Sink[SumEvent]
 	CountsByMinuteSpec    rxn.MapSpec[time.Time, int]
