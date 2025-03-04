@@ -6,8 +6,8 @@ import { TestRun } from "reduction-ts";
 import { Handler, keyEvent, SumEvent, ViewEvent } from "./index";
 import {
   MapCodec,
-  TimestampValueCodec,
-  Uint64ValueCodec,
+  timestampValueCodec,
+  uint64ValueCodec,
 } from "reduction-ts/state";
 
 test("group events by minute and emit counts", async () => {
@@ -28,8 +28,8 @@ test("group events by minute and emit counts", async () => {
         op,
         "countsByMinute",
         new MapCodec({
-          keyCodec: new TimestampValueCodec(),
-          valueCodec: new Uint64ValueCodec(),
+          keyCodec: timestampValueCodec,
+          valueCodec: uint64ValueCodec,
         })
       );
 

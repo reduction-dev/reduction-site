@@ -6,8 +6,8 @@ import { TestRun } from "reduction-ts";
 import { Handler, keyEvent, SumEvent, ViewEvent } from "./index";
 import {
   MapCodec,
-  TimestampValueCodec,
-  Uint64ValueCodec,
+  timestampValueCodec,
+  uint64ValueCodec,
 } from "reduction-ts/state";
 
 test("sliding window counts events over 7 days", async () => {
@@ -28,15 +28,15 @@ test("sliding window counts events over 7 days", async () => {
         op,
         "CountsByMinute",
         new MapCodec({
-          keyCodec: new TimestampValueCodec(),
-          valueCodec: new Uint64ValueCodec(),
+          keyCodec: timestampValueCodec,
+          valueCodec: uint64ValueCodec,
         })
       );
-      
+
       const previousWindowSum = new topology.ValueSpec<number>(
         op,
         "PreviousWindowSum",
-        new Uint64ValueCodec(),
+        uint64ValueCodec,
         0,
       );
 
@@ -93,35 +93,35 @@ test("sliding window counts events over 7 days", async () => {
   expect(userEvents).toEqual([
     // TotalViews accumulate for the first 3 minutes
     {
-      userID: "user", 
-      interval: "2025-01-01T00:02:00.000Z/2025-01-08T00:02:00.000Z", 
+      userID: "user",
+      interval: "2025-01-01T00:02:00.000Z/2025-01-08T00:02:00.000Z",
       totalViews: 2
     },
     {
-      userID: "user", 
-      interval: "2025-01-01T00:03:00.000Z/2025-01-08T00:03:00.000Z", 
+      userID: "user",
+      interval: "2025-01-01T00:03:00.000Z/2025-01-08T00:03:00.000Z",
       totalViews: 4
     },
     {
-      userID: "user", 
-      interval: "2025-01-01T00:04:00.000Z/2025-01-08T00:04:00.000Z", 
+      userID: "user",
+      interval: "2025-01-01T00:04:00.000Z/2025-01-08T00:04:00.000Z",
       totalViews: 5
     },
 
     // TotalViews decrease as windows at the end of the week close
     {
-      userID: "user", 
-      interval: "2025-01-08T00:02:00.000Z/2025-01-15T00:02:00.000Z", 
+      userID: "user",
+      interval: "2025-01-08T00:02:00.000Z/2025-01-15T00:02:00.000Z",
       totalViews: 3
     },
     {
-      userID: "user", 
-      interval: "2025-01-08T00:03:00.000Z/2025-01-15T00:03:00.000Z", 
+      userID: "user",
+      interval: "2025-01-08T00:03:00.000Z/2025-01-15T00:03:00.000Z",
       totalViews: 1
     },
     {
-      userID: "user", 
-      interval: "2025-01-08T00:04:00.000Z/2025-01-15T00:04:00.000Z", 
+      userID: "user",
+      interval: "2025-01-08T00:04:00.000Z/2025-01-15T00:04:00.000Z",
       totalViews: 0
     }
   ]);
