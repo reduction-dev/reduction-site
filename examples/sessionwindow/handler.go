@@ -2,9 +2,9 @@ package sessionwindow
 
 import (
 	"context"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"reduction.dev/reduction-go/rxn"
@@ -32,38 +32,40 @@ type Session struct {
 	End   time.Time
 }
 
-// SessionEvent returns an event to send to the sink
-func (s Session) SessionEvent(userID []byte) SessionEvent {
-	return SessionEvent{
-		UserID:   string(userID),
-		Interval: fmt.Sprintf("%s/%s", s.Start.Format(time.RFC3339), s.End.Format(time.RFC3339)),
-	}
-}
-
 func (s Session) IsZero() bool {
 	return s.Start.IsZero() && s.End.IsZero()
+}
+
+func (s Session) Interval() string {
+	return fmt.Sprintf("%s/%s", s.Start.Format(time.RFC3339), s.End.Format(time.RFC3339))
 }
 
 // SessionCodec encodes and decodes Session values
 type SessionCodec struct{}
 
-// DecodeValue returns a Session, interpreting the binary data as two uint64 timestamps
+// DecodeValue returns a Session from a string representation with ISO timestamps
 func (c SessionCodec) Decode(b []byte) (Session, error) {
-	if len(b) != 16 { // 8 bytes for each uint64
-		return Session{}, fmt.Errorf("invalid session data length: %d", len(b))
+	parts := strings.Split(string(b), "/")
+	if len(parts) != 2 {
+		return Session{}, fmt.Errorf("invalid session format: %s", b)
 	}
-	return Session{
-		Start: time.Unix(0, int64(binary.BigEndian.Uint64(b[:8]))).UTC(),
-		End:   time.Unix(0, int64(binary.BigEndian.Uint64(b[8:]))).UTC(),
-	}, nil
+
+	start, err := time.Parse(time.RFC3339, parts[0])
+	if err != nil {
+		return Session{}, fmt.Errorf("invalid start time format: %w", err)
+	}
+
+	end, err := time.Parse(time.RFC3339, parts[1])
+	if err != nil {
+		return Session{}, fmt.Errorf("invalid end time format: %w", err)
+	}
+
+	return Session{start, end}, nil
 }
 
-// EncodeValue returns the binary representation of a Session as two uint64 timestamps
+// EncodeValue returns the string representation of a Session as ISO timestamps
 func (c SessionCodec) Encode(value Session) ([]byte, error) {
-	b := make([]byte, 16)
-	binary.BigEndian.PutUint64(b[:8], uint64(value.Start.UTC().UnixNano()))
-	binary.BigEndian.PutUint64(b[8:], uint64(value.End.UTC().UnixNano()))
-	return b, nil
+	return []byte(value.Interval()), nil
 }
 
 // snippet-end: session-state
@@ -107,7 +109,7 @@ func (h *Handler) OnEvent(ctx context.Context, subject rxn.Subject, event rxn.Ke
 		session = Session{Start: eventTime, End: eventTime}
 	} else if eventTime.After(session.End.Add(h.InactivityThreshold)) {
 		// Emit the session event and start a new session
-		h.Sink.Collect(ctx, session.SessionEvent(subject.Key()))
+		h.Sink.Collect(ctx, SessionEvent{string(subject.Key()), session.Interval()})
 		session = Session{Start: eventTime, End: eventTime}
 	} else {
 		// Extend the current session
@@ -128,7 +130,7 @@ func (h *Handler) OnTimerExpired(ctx context.Context, subject rxn.Subject, times
 
 	// Check whether this is the latest timer we set for this subject
 	if timestamp.Equal(session.End.Add(h.InactivityThreshold)) {
-		h.Sink.Collect(ctx, session.SessionEvent(subject.Key()))
+		h.Sink.Collect(ctx, SessionEvent{string(subject.Key()), session.Interval()})
 		sessionState.Drop()
 	}
 	return nil
@@ -147,13 +149,13 @@ func (h *Handler) OnEvent24h(ctx context.Context, subject rxn.Subject, event rxn
 		session = Session{Start: eventTime, End: eventTime}
 	} else if eventTime.After(session.End.Add(h.InactivityThreshold)) {
 		// If inactive, emit the session event and start a new session
-		h.Sink.Collect(ctx, session.SessionEvent(subject.Key()))
+		h.Sink.Collect(ctx, SessionEvent{string(subject.Key()), session.Interval()})
 		session = Session{Start: eventTime, End: eventTime}
 		// highlight-start
 	} else if eventTime.Sub(session.Start) >= 24*time.Hour {
 		// If session reaches 24 hours, emit it and start a new one
 		session.End = session.Start.Add(24 * time.Hour)
-		h.Sink.Collect(ctx, session.SessionEvent(subject.Key()))
+		h.Sink.Collect(ctx, SessionEvent{string(subject.Key()), session.Interval()})
 		session = Session{Start: eventTime, End: eventTime}
 		// highlight-end
 	} else {

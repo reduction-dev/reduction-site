@@ -1,6 +1,7 @@
 import type { KeyedEvent, OperatorHandler, Subject } from "reduction-ts";
 import { ValueCodec } from "reduction-ts/state";
 import * as topology from "reduction-ts/topology";
+import assert from "node:assert";
 
 // snippet-start: json-structs
 // The ViewEvent represents a user viewing a page
@@ -23,34 +24,30 @@ export interface Session {
   end: Date;
 }
 
+// createSessionEvent creates a SessionEvent for the sink
 export function createSessionEvent(userID: Uint8Array, session: Session): SessionEvent {
   return {
-    userID: Buffer.from(userID).toString('utf8'),
+    userID: Buffer.from(userID).toString(),
     interval: `${session.start.toISOString()}/${session.end.toISOString()}`,
   };
 }
 
+// This is a custom codec to serialize and deserialize the session state. We're
+// storing interval strings like "2021-01-01T00:00:00.000Z/2021-01-01T12:50:00.000Z".
 export const sessionCodec = new ValueCodec<Session | undefined>({
   encode(value) {
-    if (!value) {
-      return Buffer.alloc(0);
-    }
-
-    return Buffer.from(`${value.start.getTime()}/${value.end.getTime()}`);
+    assert(value, "will only persist defined values");
+    return Buffer.from(`${value.start.toISOString()}/${value.end.toISOString()}`);
   },
 
   decode(data) {
-    if (data.length === 0) {
-      return undefined;
-    }
+    const [start, end] = Buffer.from(data)
+      .toString("utf8")
+      .split("/")
+      .map((str) => new Date(str));
 
-    const [startTime, endTime] = Buffer.from(data)
-      .toString('utf8')
-      .split('/')
-      .map(Number);
-
-    return { start: new Date(startTime), end: new Date(endTime) };
-  }
+    return { start, end };
+  },
 });
 // snippet-end: session-state
 
@@ -87,7 +84,7 @@ export class Handler implements OperatorHandler {
     this.sessionSpec = sessionSpec;
     this.inactivityThreshold = inactivityThreshold;
   }
-// snippet-end: handler-struct
+  // snippet-end: handler-struct
 
   // snippet-start: on-event
   onEvent(subject: Subject, event: KeyedEvent): void {
@@ -98,13 +95,13 @@ export class Handler implements OperatorHandler {
     if (session === undefined) {
       // Start a new session for the user
       session = { start: eventTime, end: eventTime };
-    } else if (eventTime > new Date(session!.end.getTime() + this.inactivityThreshold)) {
+    } else if (eventTime > new Date(session.end.getTime() + this.inactivityThreshold)) {
       // Emit the session event and start a new session
-      this.sink.collect(subject, createSessionEvent(subject.key, session!));
+      this.sink.collect(subject, createSessionEvent(subject.key, session));
       session = { start: eventTime, end: eventTime };
     } else {
       // Extend the current session
-      session = { start: session!.start, end: eventTime };
+      session = { ...session, end: eventTime };
     }
 
     sessionState.setValue(session);
@@ -116,9 +113,13 @@ export class Handler implements OperatorHandler {
   onTimerExpired(subject: Subject, timestamp: Date): void {
     const sessionState = this.sessionSpec.stateFor(subject);
     const session = sessionState.value;
+    assert(session, "session must exist");
 
-    // Check whether this is the latest timer we set for this subject
-    if (session && timestamp.getTime() === session.end.getTime() + this.inactivityThreshold) {
+    // Determine if this is the latest timer we set for this subject
+    const isLatestTimer =
+      timestamp.getTime() === session.end.getTime() + this.inactivityThreshold;
+
+    if (isLatestTimer) {
       this.sink.collect(subject, createSessionEvent(subject.key, session));
       sessionState.drop();
     }
@@ -138,11 +139,13 @@ export class Handler implements OperatorHandler {
       // If inactive, emit the session event and start a new session
       this.sink.collect(subject, createSessionEvent(subject.key, session!));
       session = { start: eventTime, end: eventTime };
+      // highlight-start
     } else if (eventTime.getTime() - session!.start.getTime() >= 24 * 60 * 60 * 1000) {
       // If session reaches 24 hours, emit it and start a new one
       const endTime = new Date(session!.start.getTime() + 24 * 60 * 60 * 1000);
-      this.sink.collect(subject, createSessionEvent(subject.key, { ...session!, end: endTime }));
+      this.sink.collect(subject, createSessionEvent(subject.key, { ...session, end: endTime }));
       session = { start: eventTime, end: eventTime };
+      // highlight-end
     } else {
       // Just extend the current session
       session = { start: session!.start, end: eventTime };

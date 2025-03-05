@@ -19,12 +19,9 @@ test("groups events into sessions with inactivity threshold", async () => {
   const operator = new topology.Operator(job, "Operator", {
     parallelism: 1,
     handler: (op) => {
-      const sessionSpec = new topology.ValueSpec(
-        op,
-        "Session",
-        sessionCodec,
-        undefined
-      );
+      // Setup our session spec with our custom codec. When there is no data for
+      // a user, the session will be undefined.
+      const sessionSpec = new topology.ValueSpec(op, "Session", sessionCodec, undefined);
 
       // 15 minutes in milliseconds
       const inactivityThreshold = 15 * 60 * 1000;
@@ -63,7 +60,7 @@ test("groups events into sessions with inactivity threshold", async () => {
 
   // snippet-start: assert
   // Filter events to just focus on "user"
-  const userEvents = memorySink.records.filter(event => event.userID === "user");
+  const userEvents = memorySink.records.filter((event) => event.userID === "user");
 
   expect(userEvents).toEqual([
     {
@@ -73,17 +70,13 @@ test("groups events into sessions with inactivity threshold", async () => {
     {
       userID: "user",
       interval: "2025-01-01T00:30:00.000Z/2025-01-01T00:35:00.000Z",
-    }
+    },
   ]);
   // snippet-end: assert
 });
 
 // Helper function to add view events to the test run
-function addViewEvent(
-  testRun: TestRun,
-  userID: string,
-  timestamp: string
-): void {
+function addViewEvent(testRun: TestRun, userID: string, timestamp: string): void {
   const event: ViewEvent = {
     userID,
     timestamp: new Date(timestamp),
