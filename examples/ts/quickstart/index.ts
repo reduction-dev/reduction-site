@@ -1,11 +1,11 @@
 import * as topology from "reduction-ts/topology";
 import * as embedded from "reduction-ts/connectors/embedded";
 import * as stdio from "reduction-ts/connectors/stdio";
-import { Uint64ValueCodec } from "reduction-ts/state";
+import { uint64ValueCodec } from "reduction-ts/state";
 import type { KeyedEvent, Subject } from "reduction-ts";
 
 function createHandler(op: topology.Operator, sink: stdio.Sink) {
-  const countSpec = new topology.ValueSpec<number>(op, "count", new Uint64ValueCodec(), 0);
+  const countSpec = new topology.ValueSpec<number>(op, "count", uint64ValueCodec, 0);
 
   function onEvent(subject: Subject, event: KeyedEvent) {
     const count = countSpec.stateFor(subject);
@@ -27,18 +27,22 @@ const job = new topology.Job({
   workerCount: 1,
   workingStorageLocation: "dkv-storage",
 });
-new embedded.Source(job, "source", {
-  keyEvent: () => [{
-    key: new Uint8Array(),
-    value: new Uint8Array(),
-    timestamp: new Date(),
-  }],
+const source = new embedded.Source(job, "source", {
+  keyEvent: () => [
+    {
+      key: new Uint8Array(),
+      value: new Uint8Array(),
+      timestamp: new Date(),
+    },
+  ],
   generator: "sequence",
 });
 const sink = new stdio.Sink(job, "sink");
-new topology.Operator(job, "operator", {
+const operator = new topology.Operator(job, "operator", {
   parallelism: 1,
   handler: (op) => createHandler(op, sink),
 });
+source.connect(operator);
+operator.connect(sink);
 
 job.run();

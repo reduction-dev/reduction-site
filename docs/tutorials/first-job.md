@@ -5,6 +5,10 @@ title: First Reduction Job
 
 import CodeSnippet from '@site/src/components/CodeSnippet';
 import highScoreMain from '!!raw-loader!@site/examples/highscore/main.go';
+import highScoreTypeScript from '!!raw-loader!@site/examples/ts/highscore/index.ts';
+import highScoreTestTypeScript from '!!raw-loader!@site/examples/ts/highscore/index.test.ts';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # First Reduction Job: High Scores
 
@@ -39,39 +43,75 @@ And we'll print messages when users achieve new high scores:
 
 Here's the complete code for our high scores job:
 
-<CodeSnippet language="go" code={highScoreMain} title="main.go" />
+<Tabs groupId="language">
+  <TabItem value="go" label="Go">
+    <CodeSnippet language="go" code={highScoreMain} title="main.go" />
+  </TabItem>
+  <TabItem value="typescript" label="TypeScript">
+    <CodeSnippet language="typescript" code={highScoreTypeScript} title="index.ts" />
+  </TabItem>
+</Tabs>
 
-## Code Walkthrough 
+## Code Walkthrough
 
-Let's step through the key parts of our job.
+Let's step through creating this example project and the key parts of the job code.
 
-### Create Go Project
+### Create The Project
 
-First you'll need to create a Go project for your handler. We'll call it "highscores". 
+First you'll need to create a project with your preferred language. We'll call this
+project "highscores".
 
-```bash
-mkdir highscores && cd highscores # create a directory for your module
-go mod init highscores # initialize the module
-go get reduction.dev/reduction-go # install the Go SDK
-```
+<Tabs groupId="language">
+  <TabItem value="go" label="Go">
+    ```bash
+    mkdir highscores && cd highscores # create a directory for your module
+    go mod init highscores # initialize the module
+    go get reduction.dev/reduction-go # install the Go SDK
+    ```
 
-For ths small example you can put all the code in a `main.go` in the root
-of your module directory.
+    For this small example you can put all the code in a `main.go` in the root
+    of your module directory.
+  </TabItem>
+  <TabItem className="markdown" value="typescript" label="TypeScript">
+
+    For TypeScript I recommend Bun if you can use it because it's fast and can
+    create single file executables.
+
+    ```bash
+    mkdir highscores && cd highscores
+    bun init # choose "blank" project
+    bun add reduction-ts
+    ```
+
+    We'll put all of our code for this example in the `index.ts` file.
+  </TabItem>
+</Tabs>
 
 ### Event Type
 
-We define a single type for parsing the input score events:
+We define a `ScoreEvent` type for parsing the JSON data of incoming score events:
 
-<CodeSnippet language="go" marker="score-event" code={highScoreMain} />
+<Tabs groupId="language">
+  <TabItem value="go" label="Go">
+    <CodeSnippet language="go" marker="score-event" code={highScoreMain} />
+  </TabItem>
+  <TabItem value="typescript" label="TypeScript">
+    <CodeSnippet language="typescript" marker="score-event" code={highScoreTypeScript} />
+  </TabItem>
+</Tabs>
 
 ### State Management
 
 Our handler maintains a single piece of state per user: their current high score.
 
-<CodeSnippet language="go" marker="handler-struct" code={highScoreMain} />
-
-The `ValueSpec[int]` is a type that tells Reduction how to store integers (the
-high scores) and lets us retrieve a state value on each `OnEvent` call.
+<Tabs groupId="language">
+  <TabItem value="go" label="Go">
+    <CodeSnippet language="go" marker="handler-struct" code={highScoreMain} />
+  </TabItem>
+  <TabItem value="typescript" label="TypeScript">
+    <CodeSnippet language="typescript" marker="handler-struct" code={highScoreTypeScript} />
+  </TabItem>
+</Tabs>
 
 ### Event Processing
 
@@ -80,7 +120,14 @@ a key and a timestamp with its return value. The key allows Reduction to
 partition our data stream and the timestamp allows it track the time relative to
 the events ("event time").
 
-<CodeSnippet language="go" marker="key-event" code={highScoreMain} />
+<Tabs groupId="language">
+  <TabItem value="go" label="Go">
+    <CodeSnippet language="go" marker="key-event" code={highScoreMain} />
+  </TabItem>
+  <TabItem value="typescript" label="TypeScript">
+    <CodeSnippet language="typescript" marker="key-event" code={highScoreTypeScript} />
+  </TabItem>
+</Tabs>
 
 Once events are keyed and distributed in our Reduction cluster, they'll be
 handled by `OnEvent`. In this method we:
@@ -89,13 +136,27 @@ handled by `OnEvent`. In this method we:
 * Update the current high score and send a new high score event if the user
   beat their previous high score.
 
-<CodeSnippet language="go" marker="on-event" code={highScoreMain} />
+<Tabs groupId="language">
+  <TabItem value="go" label="Go">
+    <CodeSnippet language="go" marker="on-event" code={highScoreMain} />
+  </TabItem>
+  <TabItem value="typescript" label="TypeScript">
+    <CodeSnippet language="typescript" marker="on-event" code={highScoreTypeScript} />
+  </TabItem>
+</Tabs>
 
-### Job Configuration 
+### Job Configuration
 
 Finally, we configure and run our job.
 
-<CodeSnippet language="go" marker="main" code={highScoreMain} />
+<Tabs groupId="language">
+  <TabItem value="go" label="Go">
+    <CodeSnippet language="go" marker="main" code={highScoreMain} />
+  </TabItem>
+  <TabItem value="typescript" label="TypeScript">
+    <CodeSnippet language="typescript" marker="main" code={highScoreTypeScript} />
+  </TabItem>
+</Tabs>
 
 ## Running the Job
 
@@ -108,9 +169,18 @@ mkfifo events
 
 Build your Reduction handler:
 
-```bash
-go build # creates highscore file
-```
+<Tabs groupId="language">
+  <TabItem value="go" label="Go">
+    ```bash
+    go build # creates highscore file
+    ```
+  </TabItem>
+  <TabItem value="typescript" label="TypeScript">
+    ```bash
+    bun build --compile --outfile=highscore index.ts # creates highscore file
+    ```
+  </TabItem>
+</Tabs>
 
 In one terminal, start the job reading from the pipe:
 
@@ -151,6 +221,6 @@ rm events
 
 ## Next Steps
 
-This high scores example demonstrates the basics of building a stateful
+This example demonstrates the basics of building a stateful
 streaming application with Reduction. From here, you can start learning about
 windows in the [Tumbling Windows](./tumbling-windows.md) tutorial.

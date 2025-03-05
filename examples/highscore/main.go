@@ -24,7 +24,10 @@ type ScoreEvent struct {
 // snippet-start: handler-struct
 // Handler tracks high scores for each user
 type Handler struct {
-	Sink          rxn.Sink[stdio.Event]
+	// The sink collects the high score messages
+	Sink rxn.Sink[stdio.Event]
+
+	// ValueSpec tells reduction how to store and retrieve high scores for each user
 	HighScoreSpec rxn.ValueSpec[int]
 }
 
@@ -94,10 +97,14 @@ func main() {
 	sink := stdio.NewSink(job, "Sink")
 
 	operator := topology.NewOperator(job, "Operator", &topology.OperatorParams{
+		// This is where we configure the operator handler. We define the value spec
+		// in the context of the operator which makes the state spec available as
+		// static configuration.
 		Handler: func(op *topology.Operator) rxn.OperatorHandler {
+			highScoreSpec := topology.NewValueSpec(op, "highscore", rxn.ScalarValueCodec[int]{})
 			return &Handler{
 				Sink:          sink,
-				HighScoreSpec: topology.NewValueSpec(op, "highscore", rxn.ScalarValueCodec[int]{}),
+				HighScoreSpec: highScoreSpec,
 			}
 		},
 	})
