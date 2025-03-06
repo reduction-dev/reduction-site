@@ -1,27 +1,31 @@
 import type { KeyedEvent, OperatorHandler, Subject } from "reduction-ts";
-import * as topology from "reduction-ts/topology";
 import * as stdio from "reduction-ts/connectors/stdio";
 import { uint64ValueCodec } from "reduction-ts/state";
+import { Temporal } from "reduction-ts/temporal";
+import * as topology from "reduction-ts/topology";
 
 // snippet-start: score-event
 // ScoreEvent represents a user scoring points in a game
 export interface ScoreEvent {
   userID: string;
   score: number;
-  timestamp: Date;
+  timestamp: string;
 }
 // snippet-end: score-event
 
 // snippet-start: handler-struct
 // Handler tracks high scores for each user
 export class Handler implements OperatorHandler {
-	// The sink collects the high score messages
+  // The sink collects the high score messages
   private sink: topology.Sink<Uint8Array>;
 
-	// ValueSpec tells reduction how to store and retrieve high scores for each user
+  // ValueSpec tells reduction how to store and retrieve high scores for each user
   private highScoreSpec: topology.ValueSpec<number>;
 
-  constructor(highScoreSpec: topology.ValueSpec<number>, sink: topology.Sink<Uint8Array>) {
+  constructor(
+    highScoreSpec: topology.ValueSpec<number>,
+    sink: topology.Sink<Uint8Array>
+  ) {
     this.highScoreSpec = highScoreSpec;
     this.sink = sink;
   }
@@ -48,7 +52,7 @@ export class Handler implements OperatorHandler {
   // snippet-end: on-event
 
   // Timers are not used in this example
-  onTimerExpired(subject: Subject, timestamp: Date) {}
+  onTimerExpired(subject: Subject, timestamp: Temporal.Instant) {}
 }
 
 // snippet-start: key-event
@@ -59,7 +63,7 @@ export function keyEvent(eventData: Uint8Array): KeyedEvent[] {
   return [
     {
       key: Buffer.from(event.userID),
-      timestamp: new Date(event.timestamp),
+      timestamp: Temporal.Instant.from(event.timestamp),
       value: eventData,
     },
   ];
@@ -92,7 +96,12 @@ if (require.main === module) {
     // in the context of the operator which makes the state spec available as
     // static configuration.
     handler: (op) => {
-      const highScoreSpec = new topology.ValueSpec<number>(op, "highscore", uint64ValueCodec, 0);
+      const highScoreSpec = new topology.ValueSpec<number>(
+        op,
+        "highscore",
+        uint64ValueCodec,
+        0
+      );
       return new Handler(highScoreSpec, sink);
     },
   });

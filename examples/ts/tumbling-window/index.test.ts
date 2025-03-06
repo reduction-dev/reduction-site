@@ -1,14 +1,15 @@
 import { expect, test } from "bun:test";
+import { TestRun } from "reduction-ts";
 import * as embedded from "reduction-ts/connectors/embedded";
 import * as memory from "reduction-ts/connectors/memory";
-import * as topology from "reduction-ts/topology";
-import { TestRun } from "reduction-ts";
-import { Handler, keyEvent, SumEvent, ViewEvent } from "./index";
 import {
   MapCodec,
   timestampValueCodec,
   uint64ValueCodec,
 } from "reduction-ts/state";
+import { Temporal } from "reduction-ts/temporal";
+import * as topology from "reduction-ts/topology";
+import { Handler, keyEvent, SumEvent, ViewEvent } from "./index";
 
 test("group events by minute and emit counts", async () => {
   // snippet-start: job-setup
@@ -24,7 +25,7 @@ test("group events by minute and emit counts", async () => {
   const operator = new topology.Operator(job, "Operator", {
     parallelism: 1,
     handler: (op) => {
-      const state = new topology.MapSpec<Date, number>(
+      const state = new topology.MapSpec<Temporal.Instant, number>(
         op,
         "countsByMinute",
         new MapCodec({
@@ -63,12 +64,12 @@ test("group events by minute and emit counts", async () => {
   expect(memorySink.records).toEqual([
     {
       channelId: "channel",
-      timestamp: new Date("2025-01-01T00:01:00Z"),
+      timestamp: Temporal.Instant.from("2025-01-01T00:01:00Z"),
       sum: 3,
     },
     {
       channelId: "channel",
-      timestamp: new Date("2025-01-01T00:02:00Z"),
+      timestamp: Temporal.Instant.from("2025-01-01T00:02:00Z"),
       sum: 1,
     },
   ]);
@@ -81,11 +82,7 @@ function addViewEvent(
   channelId: string,
   timestamp: string
 ): void {
-  const event: ViewEvent = {
-    channelId,
-    timestamp: new Date(timestamp),
-  };
-
+  const event: ViewEvent = { channelId, timestamp };
   const data = Buffer.from(JSON.stringify(event));
   testRun.addRecord(data);
 }

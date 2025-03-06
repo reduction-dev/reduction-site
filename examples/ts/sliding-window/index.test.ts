@@ -1,14 +1,15 @@
 import { expect, test } from "bun:test";
+import { TestRun } from "reduction-ts";
 import * as embedded from "reduction-ts/connectors/embedded";
 import * as memory from "reduction-ts/connectors/memory";
-import * as topology from "reduction-ts/topology";
-import { TestRun } from "reduction-ts";
-import { Handler, keyEvent, SumEvent, ViewEvent } from "./index";
 import {
   MapCodec,
   timestampValueCodec,
   uint64ValueCodec,
 } from "reduction-ts/state";
+import { Temporal } from "reduction-ts/temporal";
+import * as topology from "reduction-ts/topology";
+import { Handler, keyEvent, SumEvent, ViewEvent } from "./index";
 
 test("sliding window counts events over 7 days", async () => {
   // snippet-start: job-setup
@@ -24,7 +25,7 @@ test("sliding window counts events over 7 days", async () => {
   const operator = new topology.Operator(job, "Operator", {
     parallelism: 1,
     handler: (op) => {
-      const countsByMinute = new topology.MapSpec<Date, number>(
+      const countsByMinute = new topology.MapSpec<Temporal.Instant, number>(
         op,
         "CountsByMinute",
         new MapCodec({
@@ -94,34 +95,34 @@ test("sliding window counts events over 7 days", async () => {
     // TotalViews accumulate for the first 3 minutes
     {
       userID: "user",
-      interval: "2025-01-01T00:02:00.000Z/2025-01-08T00:02:00.000Z",
+      interval: "2025-01-01T00:02Z/2025-01-08T00:02Z",
       totalViews: 2
     },
     {
       userID: "user",
-      interval: "2025-01-01T00:03:00.000Z/2025-01-08T00:03:00.000Z",
+      interval: "2025-01-01T00:03Z/2025-01-08T00:03Z",
       totalViews: 4
     },
     {
       userID: "user",
-      interval: "2025-01-01T00:04:00.000Z/2025-01-08T00:04:00.000Z",
+      interval: "2025-01-01T00:04Z/2025-01-08T00:04Z",
       totalViews: 5
     },
 
     // TotalViews decrease as windows at the end of the week close
     {
       userID: "user",
-      interval: "2025-01-08T00:02:00.000Z/2025-01-15T00:02:00.000Z",
+      interval: "2025-01-08T00:02Z/2025-01-15T00:02Z",
       totalViews: 3
     },
     {
       userID: "user",
-      interval: "2025-01-08T00:03:00.000Z/2025-01-15T00:03:00.000Z",
+      interval: "2025-01-08T00:03Z/2025-01-15T00:03Z",
       totalViews: 1
     },
     {
       userID: "user",
-      interval: "2025-01-08T00:04:00.000Z/2025-01-15T00:04:00.000Z",
+      interval: "2025-01-08T00:04Z/2025-01-15T00:04Z",
       totalViews: 0
     }
   ]);
@@ -134,11 +135,7 @@ function addViewEvent(
   userID: string,
   timestamp: string
 ): void {
-  const event: ViewEvent = {
-    userID,
-    timestamp: new Date(timestamp),
-  };
-
+  const event: ViewEvent = { userID, timestamp };
   const data = Buffer.from(JSON.stringify(event));
   testRun.addRecord(data);
 }

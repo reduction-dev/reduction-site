@@ -1,13 +1,14 @@
-import type { KeyedEvent, OperatorHandler, Subject } from "reduction-ts";
-import { ValueCodec } from "reduction-ts/state";
-import * as topology from "reduction-ts/topology";
 import assert from "node:assert";
+import { KeyedEvent, OperatorHandler, Subject } from "reduction-ts";
+import { ValueCodec } from "reduction-ts/state";
+import { Temporal } from "reduction-ts/temporal";
+import * as topology from "reduction-ts/topology";
 
 // snippet-start: json-structs
 // The ViewEvent represents a user viewing a page
 export interface ViewEvent {
   userID: string;
-  timestamp: Date;
+  timestamp: string;
 }
 
 // SessionEvent represents a user's continuous session on the site
@@ -20,31 +21,38 @@ export interface SessionEvent {
 // snippet-start: session-state
 // Session represents the internal state of an active session
 export interface Session {
-  start: Date;
-  end: Date;
+  start: Temporal.Instant;
+  end: Temporal.Instant;
 }
 
 // createSessionEvent creates a SessionEvent for the sink
-export function createSessionEvent(userID: Uint8Array, session: Session): SessionEvent {
+function createSessionEvent(userID: Uint8Array, session: Session): SessionEvent {
   return {
     userID: Buffer.from(userID).toString(),
-    interval: `${session.start.toISOString()}/${session.end.toISOString()}`,
+    interval: sessionInterval(session),
   };
 }
 
-// This is a custom codec to serialize and deserialize the session state. We're
-// storing interval strings like "2021-01-01T00:00:00.000Z/2021-01-01T12:50:00.000Z".
+// Returns a interval string like "2025-01-01T00:00Z/2025-01-01T12:50Z".
+function sessionInterval(session: Session): string {
+  return [
+    session.start.toString({ smallestUnit: "minute" }),
+    session.end.toString({ smallestUnit: "minute" }),
+  ].join("/");
+}
+
+// This is a custom codec to serialize and deserialize the session state.
 export const sessionCodec = new ValueCodec<Session | undefined>({
   encode(value) {
     assert(value, "will only persist defined values");
-    return Buffer.from(`${value.start.toISOString()}/${value.end.toISOString()}`);
+    return Buffer.from(sessionInterval(value));
   },
 
   decode(data) {
     const [start, end] = Buffer.from(data)
       .toString("utf8")
       .split("/")
-      .map((str) => new Date(str));
+      .map(Temporal.Instant.from);
 
     return { start, end };
   },
@@ -59,7 +67,7 @@ export function keyEvent(eventData: Uint8Array): KeyedEvent[] {
   return [
     {
       key: Buffer.from(event.userID),
-      timestamp: new Date(event.timestamp),
+      timestamp: Temporal.Instant.from(event.timestamp),
       value: Buffer.from([]),
     },
   ];
@@ -73,16 +81,16 @@ export function keyEvent(eventData: Uint8Array): KeyedEvent[] {
 export class Handler implements OperatorHandler {
   private sink: topology.Sink<SessionEvent>;
   private sessionSpec: topology.ValueSpec<Session | undefined>;
-  private inactivityThreshold: number;
+  private sessionTimeout: Temporal.Duration;
 
   constructor(
     sessionSpec: topology.ValueSpec<Session | undefined>,
     sink: topology.Sink<SessionEvent>,
-    inactivityThreshold: number
+    inactivityThreshold: Temporal.Duration
   ) {
     this.sink = sink;
     this.sessionSpec = sessionSpec;
-    this.inactivityThreshold = inactivityThreshold;
+    this.sessionTimeout = inactivityThreshold;
   }
   // snippet-end: handler-struct
 
@@ -95,7 +103,9 @@ export class Handler implements OperatorHandler {
     if (session === undefined) {
       // Start a new session for the user
       session = { start: eventTime, end: eventTime };
-    } else if (eventTime > new Date(session.end.getTime() + this.inactivityThreshold)) {
+    } else if (
+      Temporal.Duration.compare(session.end.until(eventTime), this.sessionTimeout) > 0
+    ) {
       // Emit the session event and start a new session
       this.sink.collect(subject, createSessionEvent(subject.key, session));
       session = { start: eventTime, end: eventTime };
@@ -105,20 +115,18 @@ export class Handler implements OperatorHandler {
     }
 
     sessionState.setValue(session);
-    subject.setTimer(new Date(session.end.getTime() + this.inactivityThreshold));
+    subject.setTimer(session.end.add(this.sessionTimeout));
   }
   // snippet-end: on-event
 
   // snippet-start: on-timer
-  onTimerExpired(subject: Subject, timestamp: Date): void {
+  onTimerExpired(subject: Subject, timestamp: Temporal.Instant): void {
     const sessionState = this.sessionSpec.stateFor(subject);
     const session = sessionState.value;
     assert(session, "session must exist");
 
     // Determine if this is the latest timer we set for this subject
-    const isLatestTimer =
-      timestamp.getTime() === session.end.getTime() + this.inactivityThreshold;
-
+    const isLatestTimer = timestamp.equals(session.end.add(this.sessionTimeout));
     if (isLatestTimer) {
       this.sink.collect(subject, createSessionEvent(subject.key, session));
       sessionState.drop();
@@ -131,28 +139,36 @@ export class Handler implements OperatorHandler {
     const sessionState = this.sessionSpec.stateFor(subject);
     let session = sessionState.value;
     const eventTime = event.timestamp;
+    const maxLength = Temporal.Duration.from({ hours: 24 });
 
     if (session === undefined) {
       // Start a new session for the user
       session = { start: eventTime, end: eventTime };
-    } else if (eventTime > new Date(session!.end.getTime() + this.inactivityThreshold)) {
-      // If inactive, emit the session event and start a new session
-      this.sink.collect(subject, createSessionEvent(subject.key, session!));
+    } else if (
+      Temporal.Duration.compare(session.end.until(eventTime), this.sessionTimeout) > 0
+    ) {
+      // Emit the session event and start a new session
+      this.sink.collect(subject, createSessionEvent(subject.key, session));
       session = { start: eventTime, end: eventTime };
       // highlight-start
-    } else if (eventTime.getTime() - session!.start.getTime() >= 24 * 60 * 60 * 1000) {
-      // If session reaches 24 hours, emit it and start a new one
-      const endTime = new Date(session!.start.getTime() + 24 * 60 * 60 * 1000);
-      this.sink.collect(subject, createSessionEvent(subject.key, { ...session, end: endTime }));
-      session = { start: eventTime, end: eventTime };
+    } else if (
+      Temporal.Duration.compare(session.start.until(eventTime), maxLength) >= 0
+    ) {
+      // The session reached 24 hours, emit a 24h session and start a new one
+      const end = session.start.add(maxLength);
+      this.sink.collect(
+        subject,
+        createSessionEvent(subject.key, { ...session, end })
+      );
+      session = { start: end, end };
       // highlight-end
     } else {
-      // Just extend the current session
-      session = { start: session!.start, end: eventTime };
+      // Extend the current session
+      session = { ...session, end: eventTime };
     }
 
     sessionState.setValue(session);
-    subject.setTimer(new Date(session.end.getTime() + this.inactivityThreshold));
+    subject.setTimer(session.end.add(this.sessionTimeout));
   }
   // snippet-end: on-event-24h
 }

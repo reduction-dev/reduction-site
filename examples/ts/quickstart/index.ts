@@ -2,7 +2,8 @@ import * as topology from "reduction-ts/topology";
 import * as embedded from "reduction-ts/connectors/embedded";
 import * as stdio from "reduction-ts/connectors/stdio";
 import { uint64ValueCodec } from "reduction-ts/state";
-import type { KeyedEvent, Subject } from "reduction-ts";
+import { type KeyedEvent, type Subject } from "reduction-ts";
+import { Temporal } from "reduction-ts/temporal";
 
 function createHandler(op: topology.Operator, sink: stdio.Sink) {
   const countSpec = new topology.ValueSpec<number>(op, "count", uint64ValueCodec, 0);
@@ -17,7 +18,7 @@ function createHandler(op: topology.Operator, sink: stdio.Sink) {
 
   return {
     onEvent,
-    onTimerExpired(subject: Subject, timer: Date) {
+    onTimerExpired(subject: Subject, timer: Temporal.Instant) {
       throw new Error("timers not used");
     },
   };
@@ -32,7 +33,7 @@ const source = new embedded.Source(job, "source", {
     {
       key: new Uint8Array(),
       value: new Uint8Array(),
-      timestamp: new Date(),
+      timestamp: Temporal.Now.instant(),
     },
   ],
   generator: "sequence",

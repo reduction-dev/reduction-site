@@ -1,8 +1,9 @@
 import { expect, test } from "bun:test";
+import { TestRun } from "reduction-ts";
 import * as embedded from "reduction-ts/connectors/embedded";
 import * as memory from "reduction-ts/connectors/memory";
+import { Temporal } from "reduction-ts/temporal";
 import * as topology from "reduction-ts/topology";
-import { TestRun } from "reduction-ts";
 import { Handler, keyEvent, sessionCodec, SessionEvent, ViewEvent } from "./index";
 
 test("groups events into sessions with inactivity threshold", async () => {
@@ -24,7 +25,7 @@ test("groups events into sessions with inactivity threshold", async () => {
       const sessionSpec = new topology.ValueSpec(op, "Session", sessionCodec, undefined);
 
       // 15 minutes in milliseconds
-      const inactivityThreshold = 15 * 60 * 1000;
+      const inactivityThreshold = Temporal.Duration.from({ minutes: 15 });
 
       return new Handler(sessionSpec, memorySink, inactivityThreshold);
     },
@@ -65,11 +66,11 @@ test("groups events into sessions with inactivity threshold", async () => {
   expect(userEvents).toEqual([
     {
       userID: "user",
-      interval: "2025-01-01T00:01:00.000Z/2025-01-01T00:10:00.000Z",
+      interval: "2025-01-01T00:01Z/2025-01-01T00:10Z",
     },
     {
       userID: "user",
-      interval: "2025-01-01T00:30:00.000Z/2025-01-01T00:35:00.000Z",
+      interval: "2025-01-01T00:30Z/2025-01-01T00:35Z",
     },
   ]);
   // snippet-end: assert
@@ -77,11 +78,7 @@ test("groups events into sessions with inactivity threshold", async () => {
 
 // Helper function to add view events to the test run
 function addViewEvent(testRun: TestRun, userID: string, timestamp: string): void {
-  const event: ViewEvent = {
-    userID,
-    timestamp: new Date(timestamp),
-  };
-
+  const event: ViewEvent = { userID, timestamp };
   const data = Buffer.from(JSON.stringify(event));
   testRun.addRecord(data);
 }
