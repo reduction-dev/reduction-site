@@ -38,13 +38,13 @@ Or downloaded and run with one of these pre-built binaries:
 Make sure you have `reduction` in your path:
 
 <CodeBlock language="shell-session">
-{`$ reduction --version 
+{`$ reduction --version
 reduction version ${currentVersion}`}
 </CodeBlock>
 
 ## Setup
 
-Create a new project and add the Reduction Go SDK as a dependency. For example:
+Create a new project to develop your job:
 
 <Tabs groupId="language">
    <TabItem value="go" label="Go">
@@ -82,15 +82,15 @@ running.
 
 ## Running a Job
 
-Try out the job:
+Let's run your job locally using the `reduction dev` command.
 
-1. Build your job as an executable:
+Build your job as an executable:
 
 <Tabs groupId="language">
    <TabItem value="go" label="Go">
    ```bash
    go mod tidy
-   go build
+   go build # creates an "myjob" executable
    ```
    </TabItem>
    <TabItem value="typescript" label="TypeScript">
@@ -101,8 +101,8 @@ Try out the job:
 </Tabs>
 
 
-2. Run the job with `reduction-dev`:
-   
+Run the job with `reduction-dev`:
+
 ```bash
 reduction dev ./myjob
 ```

@@ -13,7 +13,7 @@ import TabItem from '@theme/TabItem';
 # First Reduction Job: High Scores
 
 Let's create a simple Reduction job that tracks high scores for players in a
-game. When a player achieves a new personal best score, our job will emit an
+game. When a player achieves a new personal best score, our job will send an
 event to celebrate their achievement.
 
 ## Overview
@@ -23,7 +23,7 @@ This job will:
 2. Remember the high score for each user
 3. Emit events whenever a user beats their previous best score
 
-The input events will look like:
+The input events represent the score that the player has at the end of a game:
 
 ```json
 {
@@ -33,7 +33,7 @@ The input events will look like:
 }
 ```
 
-And we'll print messages when users achieve new high scores:
+And we'll print messages when a user achieves a new high score:
 
 ```
 🏆 New high score for player123: 100 (previous: 0)
@@ -223,4 +223,4 @@ rm events
 
 This example demonstrates the basics of building a stateful
 streaming application with Reduction. From here, you can start learning about
-windows in the [Tumbling Windows](./tumbling-windows.md) tutorial.
+windows in the [Tumbling Windows](./tumbling-windows) tutorial.

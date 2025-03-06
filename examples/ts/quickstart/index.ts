@@ -8,25 +8,24 @@ import { Temporal } from "reduction-ts/temporal";
 function createHandler(op: topology.Operator, sink: stdio.Sink) {
   const countSpec = new topology.ValueSpec<number>(op, "count", uint64ValueCodec, 0);
 
-  function onEvent(subject: Subject, event: KeyedEvent) {
-    const count = countSpec.stateFor(subject);
-    count.setValue(count.value + 1);
-    if (count.value % 100_000 === 0) {
-      sink.collect(subject, Buffer.from(`Count: ${count.value}`));
-    }
-  }
-
   return {
-    onEvent,
+    onEvent(subject: Subject, event: KeyedEvent) {
+      const count = countSpec.stateFor(subject);
+      count.setValue(count.value + 1);
+      if (count.value % 100_000 === 0) {
+        sink.collect(subject, Buffer.from(`Count: ${count.value}`));
+      }
+    },
+
     onTimerExpired(subject: Subject, timer: Temporal.Instant) {
-      throw new Error("timers not used");
+      /* Timers not used */
     },
   };
 }
 
 const job = new topology.Job({
   workerCount: 1,
-  workingStorageLocation: "dkv-storage",
+  workingStorageLocation: "storage",
 });
 const source = new embedded.Source(job, "source", {
   keyEvent: () => [

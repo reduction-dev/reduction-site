@@ -7,7 +7,7 @@ import * as topology from "reduction-ts/topology";
 // snippet-start: score-event
 // ScoreEvent represents a user scoring points in a game
 export interface ScoreEvent {
-  userID: string;
+  user_id: string;
   score: number;
   timestamp: string;
 }
@@ -41,8 +41,8 @@ export class Handler implements OperatorHandler {
 
     // Check if this is a new high score
     if (event.score > highScore.value) {
-      // Format and emit the high score message
-      const message = `🏆 New high score for ${event.userID}: ${event.score} (previous: ${highScore.value})\n`;
+      // Format and send the high score message
+      const message = `🏆 New high score for ${event.user_id}: ${event.score} (previous: ${highScore.value})\n`;
       this.sink.collect(subject, Buffer.from(message));
 
       // Update the stored high score
@@ -59,10 +59,9 @@ export class Handler implements OperatorHandler {
 // KeyEvent extracts the user ID as the key for event routing and a timestamp
 export function keyEvent(eventData: Uint8Array): KeyedEvent[] {
   const event: ScoreEvent = JSON.parse(Buffer.from(eventData).toString());
-
   return [
     {
-      key: Buffer.from(event.userID),
+      key: Buffer.from(event.user_id),
       timestamp: Temporal.Instant.from(event.timestamp),
       value: eventData,
     },
@@ -93,8 +92,8 @@ if (require.main === module) {
     parallelism: 1,
 
     // This is where we configure the operator handler. We define the value spec
-    // in the context of the operator which makes the state spec available as
-    // static configuration.
+    // in the context of the operator, making the state spec available as static
+    // configuration.
     handler: (op) => {
       const highScoreSpec = new topology.ValueSpec<number>(
         op,

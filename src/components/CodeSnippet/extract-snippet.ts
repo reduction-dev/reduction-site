@@ -45,12 +45,42 @@ export function extractSnippet(code: string, marker?: string): string {
 
   // Extract lines between start and end markers
   const snippetLines: string[] = [];
+  let inCutSection = false;
+  let cutStartCount = 0;
+
   for (let i = startIndex + 1; i < endIndex; i++) {
-    // Omit any marker lines (for any marker)
-    if (/^\s*\/\/\s*snippet-(start|end):/.test(lines[i])) {
+    const line = lines[i];
+
+    // Check for cut-start marker
+    if (new RegExp(`^\\s*\\/\\/\\s*cut-start:\\s*${marker}\\s*$`).test(line)) {
+      if (inCutSection) {
+        throw new Error(`Duplicate cut-start markers without cut-end in "${marker}" snippet`);
+      }
+      inCutSection = true;
+      cutStartCount++;
       continue;
     }
-    snippetLines.push(lines[i]);
+
+    // Check for cut-end marker
+    if (new RegExp(`^\\s*\\/\\/\\s*cut-end:\\s*${marker}\\s*$`).test(line)) {
+      if (!inCutSection) {
+        throw new Error(`Duplicate cut-end marker without matching cut-start in "${marker}" snippet`);
+      }
+      inCutSection = false;
+      continue;
+    }
+
+    // Skip lines in cut sections and snippet marker lines
+    if (inCutSection || /^\s*\/\/\s*snippet-(start|end):/.test(line)) {
+      continue;
+    }
+
+    snippetLines.push(line);
+  }
+
+  // Check if there's an unclosed cut section
+  if (inCutSection) {
+    throw new Error(`Missing cut-end marker for cut-start in "${marker}" snippet`);
   }
 
   // Remove shared indentation

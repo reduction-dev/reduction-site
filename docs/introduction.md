@@ -59,8 +59,8 @@ occurs, common compute platforms like AWS Lambda could be sufficient.
 Reduction is a project that I personally wanted to use for years. It is in a
 proof-of-concept phase, ready for early adopters to try but not yet vetted with
 production deployments. This is an Apache 2, open source project in need of
-contributors! The engine is written in Go [reduction repo][reduction-repo] and
-the first SDK is in Go as well [reduction-go repo][reduction-go-repo]. 
+contributors! The [core engine][reduction-repo] is written in Go and there's a [Go
+SDK][reduction-go-repo] and a [TypeScript SDK][reductionn-ts-repo].
 
 Contributions needed:
 * Documentation and examples
@@ -73,4 +73,5 @@ Reduction, you can contact me from the [reduction.dev] landing page.
 
 [reduction-repo]: https://github.com/reduction-dev/reduction
 [reduction-go-repo]: https://github.com/reduction-dev/reduction-go
+[reduction-ts-repo]: https://github.com/reduction-dev/reduction-ts
 [reduction.dev]: https://reduction.dev

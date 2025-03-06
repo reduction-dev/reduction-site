@@ -5,7 +5,6 @@ import * as topology from "reduction-ts/topology";
 import { Handler, keyEvent, ScoreEvent } from "./index";
 import { uint64ValueCodec } from "reduction-ts/state";
 import { TestRun } from "reduction-ts";
-import { Temporal } from "reduction-ts/temporal";
 
 test("tracks high scores and emits events for new records", async () => {
   // Configure the job
@@ -75,7 +74,7 @@ function addScoreEvent(
   timestamp: string
 ): void {
   const event: ScoreEvent = {
-    userID: userID,
+    user_id: userID,
     score: score,
     timestamp,
   };

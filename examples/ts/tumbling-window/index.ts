@@ -47,7 +47,7 @@ export class Handler implements OperatorHandler {
     this.sink = sink;
     this.countsByMinuteSpec = countSpec;
   }
-  // snippet-end: handler
+  // cut-start: handler
 
   // snippet-start: on-event
   onEvent(subject: Subject, event: KeyedEvent): void {
@@ -89,4 +89,6 @@ export class Handler implements OperatorHandler {
     }
   }
   // snippet-end: on-timer
+  // cut-end: handler
 }
+// snippet-end: handler

@@ -63,7 +63,7 @@ func (h *Handler) OnEvent(ctx context.Context, subject rxn.Subject, keyedEvent r
 
 	// Check if this is a new high score
 	if event.Score > highScore.Value() {
-		// Format and emit the high score message
+		// Format and send the high score message
 		message := fmt.Sprintf("🏆 New high score for %s: %d (previous: %d)\n",
 			event.UserID, event.Score, highScore.Value())
 		h.Sink.Collect(ctx, []byte(message))
@@ -97,9 +97,9 @@ func main() {
 	sink := stdio.NewSink(job, "Sink")
 
 	operator := topology.NewOperator(job, "Operator", &topology.OperatorParams{
-		// This is where we configure the operator handler. We define the value spec
-		// in the context of the operator which makes the state spec available as
-		// static configuration.
+		// This is where we configure the operator handler. We define the value
+		// spec in the context of the operator, making the state spec available
+		// as static configuration.
 		Handler: func(op *topology.Operator) rxn.OperatorHandler {
 			highScoreSpec := topology.NewValueSpec(op, "highscore", rxn.ScalarValueCodec[int]{})
 			return &Handler{
