@@ -15,7 +15,7 @@ type ViewEvent struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-// KeyEvent takes the raw data from our source and returned events with timestamps and keys
+// KeyEvent takes the raw data from our source and returns events with timestamps and keys
 func KeyEvent(ctx context.Context, eventData []byte) ([]rxn.KeyedEvent, error) {
 	var event ViewEvent
 	if err := json.Unmarshal(eventData, &event); err != nil {

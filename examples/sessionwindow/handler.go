@@ -99,7 +99,9 @@ func KeyEvent(ctx context.Context, eventData []byte) ([]rxn.KeyedEvent, error) {
 // snippet-end: key-event
 
 // snippet-start: on-event
+// snippet-start: on-event-24h
 func (h *Handler) OnEvent(ctx context.Context, subject rxn.Subject, event rxn.KeyedEvent) error {
+	// cut-start: on-event-24h
 	sessionState := h.SessionSpec.StateFor(subject)
 	session := sessionState.Value()
 	eventTime := subject.Timestamp()
@@ -122,28 +124,12 @@ func (h *Handler) OnEvent(ctx context.Context, subject rxn.Subject, event rxn.Ke
 }
 
 // snippet-end: on-event
-
-// snippet-start: on-timer
-func (h *Handler) OnTimerExpired(ctx context.Context, subject rxn.Subject, timestamp time.Time) error {
-	sessionState := h.SessionSpec.StateFor(subject)
-	session := sessionState.Value()
-
-	// Check whether this is the latest timer we set for this subject
-	if timestamp.Equal(session.End.Add(h.InactivityThreshold)) {
-		h.Sink.Collect(ctx, SessionEvent{string(subject.Key()), session.Interval()})
-		sessionState.Drop()
-	}
-	return nil
-}
-
-// snippet-end: on-timer
-
 func (h *Handler) OnEvent24h(ctx context.Context, subject rxn.Subject, event rxn.KeyedEvent) error {
+	// cut-end: on-event-24h
 	sessionState := h.SessionSpec.StateFor(subject)
 	session := sessionState.Value()
 	eventTime := subject.Timestamp()
 
-	// snippet-start: on-event-24h
 	if session.IsZero() {
 		// Start a new session for the user
 		session = Session{Start: eventTime, End: eventTime}
@@ -162,9 +148,25 @@ func (h *Handler) OnEvent24h(ctx context.Context, subject rxn.Subject, event rxn
 		// Just extend the current session
 		session = Session{Start: session.Start, End: eventTime}
 	}
-	// snippet-end: on-event-24h
 
 	sessionState.Set(session)
 	subject.SetTimer(session.End.Add(h.InactivityThreshold))
 	return nil
 }
+
+// snippet-end: on-event-24h
+
+// snippet-start: on-timer
+func (h *Handler) OnTimerExpired(ctx context.Context, subject rxn.Subject, timestamp time.Time) error {
+	sessionState := h.SessionSpec.StateFor(subject)
+	session := sessionState.Value()
+
+	// Check whether this is the latest timer we set for this subject
+	if timestamp.Equal(session.End.Add(h.InactivityThreshold)) {
+		h.Sink.Collect(ctx, SessionEvent{string(subject.Key()), session.Interval()})
+		sessionState.Drop()
+	}
+	return nil
+}
+
+// snippet-end: on-timer

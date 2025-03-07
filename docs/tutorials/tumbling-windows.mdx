@@ -104,7 +104,7 @@ each tumbling window.
 
 As Reduction processes the view events, it will call the handler's `OnEvent`
 method for each event to give us an opportunity to store state, set timers, or
-collect new events. 
+collect new events.
 
 In our handler's `OnEvent` method we'll load the state, increment
 the sum for the event's minute (rounding down), and set a timer
@@ -123,7 +123,7 @@ to fire on the next minute.
 
 When a timer elapses, we'll send the sum value to our sink and remove the
 obsolete minute bucket from our map. Reduction calls the `OnTimerExpired` method
-when a a timer expires.
+when a timer expires.
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
@@ -148,7 +148,7 @@ have sent.
 Our Handler's `Sink` member is an interface that allows us to collect our
 `SumEvent` events (`connectors.SinkRuntime[SumEvent]`). When testing we can use
 Reduction's memory sink type to record sink events rather than having the
-cluster handle them. 
+cluster handle them.
 
 Let's start the test by setting up our job:
 

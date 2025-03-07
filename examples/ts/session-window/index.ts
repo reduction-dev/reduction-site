@@ -95,7 +95,9 @@ export class Handler implements OperatorHandler {
   // snippet-end: handler-struct
 
   // snippet-start: on-event
+  // snippet-start: on-event-24h
   onEvent(subject: Subject, event: KeyedEvent): void {
+    // cut-start: on-event-24h
     const sessionState = this.sessionSpec.stateFor(subject);
     let session = sessionState.value;
     const eventTime = event.timestamp;
@@ -134,8 +136,8 @@ export class Handler implements OperatorHandler {
   }
   // snippet-end: on-timer
 
-  // snippet-start: on-event-24h
   onEvent24h(subject: Subject, event: KeyedEvent): void {
+    // cut-end: on-event-24h
     const sessionState = this.sessionSpec.stateFor(subject);
     let session = sessionState.value;
     const eventTime = event.timestamp;

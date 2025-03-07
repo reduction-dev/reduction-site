@@ -60,7 +60,7 @@ Reduction is a project that I personally wanted to use for years. It is in a
 proof-of-concept phase, ready for early adopters to try but not yet vetted with
 production deployments. This is an Apache 2, open source project in need of
 contributors! The [core engine][reduction-repo] is written in Go and there's a [Go
-SDK][reduction-go-repo] and a [TypeScript SDK][reductionn-ts-repo].
+SDK][reduction-go-repo] and a [TypeScript SDK][reduction-ts-repo].
 
 Contributions needed:
 * Documentation and examples
