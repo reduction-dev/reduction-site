@@ -2,13 +2,13 @@
 sidebar_position: 2
 ---
 
+import handlerGo from '!!raw-loader!@site/examples/sliding-window-go/handler.go';
+import testGo from '!!raw-loader!@site/examples/sliding-window-go/handler_test.go';
+import testTS from '!!raw-loader!@site/examples/sliding-window-ts/index.test.ts';
+import handlerTS from '!!raw-loader!@site/examples/sliding-window-ts/index.ts';
 import CodeSnippet from '@site/src/components/CodeSnippet';
-import slidingWindowHandler from '!!raw-loader!@site/examples/slidingwindow/handler.go';
-import slidingWindowTest from '!!raw-loader!@site/examples/slidingwindow/handler_test.go';
-import handlerTypeScript from '!!raw-loader!@site/examples/ts/sliding-window/index.ts';
-import handlerTestTypeScript from '!!raw-loader!@site/examples/ts/sliding-window/index.test.ts';
-import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import Tabs from '@theme/Tabs';
 
 # Sliding Windows
 
@@ -77,10 +77,10 @@ Reduction's `KeyedEvent` type.
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" code={slidingWindowHandler} marker="key-event" />
+    <CodeSnippet language="go" code={handlerGo} marker="key-event" />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
-    <CodeSnippet language="typescript" code={handlerTypeScript} marker="key-event" />
+    <CodeSnippet language="typescript" code={handlerTS} marker="key-event" />
   </TabItem>
 </Tabs>
 
@@ -94,10 +94,10 @@ Our sink will take a `SumEvent` type to collect the results of each window.
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" code={slidingWindowHandler} marker="handler" />
+    <CodeSnippet language="go" code={handlerGo} marker="handler" />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
-    <CodeSnippet language="typescript" code={handlerTypeScript} marker="handler" />
+    <CodeSnippet language="typescript" code={handlerTS} marker="handler" />
   </TabItem>
 </Tabs>
 
@@ -108,10 +108,10 @@ and set a timer to fire on the next minute.
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" code={slidingWindowHandler} marker="on-event" />
+    <CodeSnippet language="go" code={handlerGo} marker="on-event" />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
-    <CodeSnippet language="typescript" code={handlerTypeScript} marker="on-event" />
+    <CodeSnippet language="typescript" code={handlerTS} marker="on-event" />
   </TabItem>
 </Tabs>
 
@@ -133,10 +133,10 @@ Let's write the `OnTimerExpired` method to send these events:
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" code={slidingWindowHandler} marker="on-timer" />
+    <CodeSnippet language="go" code={handlerGo} marker="on-timer" />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
-    <CodeSnippet language="typescript" code={handlerTypeScript} marker="on-timer" />
+    <CodeSnippet language="typescript" code={handlerTS} marker="on-timer" />
   </TabItem>
 </Tabs>
 
@@ -169,10 +169,10 @@ is where we configure the two State Specs:
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" code={slidingWindowTest} marker="job-setup" />
+    <CodeSnippet language="go" code={testGo} marker="job-setup" />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
-    <CodeSnippet language="typescript" code={handlerTestTypeScript} marker="job-setup" />
+    <CodeSnippet language="typescript" code={testTS} marker="job-setup" />
   </TabItem>
 </Tabs>
 
@@ -180,10 +180,10 @@ Then we set up our test run with a series of ViewEvents to process.
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" code={slidingWindowTest} marker="test-run" />
+    <CodeSnippet language="go" code={testGo} marker="test-run" />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
-    <CodeSnippet language="typescript" code={handlerTestTypeScript} marker="test-run" />
+    <CodeSnippet language="typescript" code={testTS} marker="test-run" />
   </TabItem>
 </Tabs>
 
@@ -196,10 +196,10 @@ Finally we can assert on the events in the `memorySink`.
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" code={slidingWindowTest} marker="assert" />
+    <CodeSnippet language="go" code={testGo} marker="assert" />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
-    <CodeSnippet language="typescript" code={handlerTestTypeScript} marker="assert" />
+    <CodeSnippet language="typescript" code={testTS} marker="assert" />
   </TabItem>
 </Tabs>
 

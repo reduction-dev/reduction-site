@@ -4,9 +4,8 @@ title: First Reduction Job
 ---
 
 import CodeSnippet from '@site/src/components/CodeSnippet';
-import highScoreMain from '!!raw-loader!@site/examples/highscore/main.go';
-import highScoreTypeScript from '!!raw-loader!@site/examples/ts/highscore/index.ts';
-import highScoreTestTypeScript from '!!raw-loader!@site/examples/ts/highscore/index.test.ts';
+import highScoreGo from '!!raw-loader!@site/examples/high-score-go/main.go';
+import highScoreTS from '!!raw-loader!@site/examples/high-score-ts/index.ts';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
@@ -45,10 +44,10 @@ Here's the complete code for our high scores job:
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" code={highScoreMain} title="main.go" />
+    <CodeSnippet language="go" code={highScoreGo} title="main.go" />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
-    <CodeSnippet language="typescript" code={highScoreTypeScript} title="index.ts" />
+    <CodeSnippet language="typescript" code={highScoreTS} title="index.ts" />
   </TabItem>
 </Tabs>
 
@@ -93,10 +92,10 @@ We define a `ScoreEvent` type for parsing the JSON data of incoming score events
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" marker="score-event" code={highScoreMain} />
+    <CodeSnippet language="go" marker="score-event" code={highScoreGo} />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
-    <CodeSnippet language="typescript" marker="score-event" code={highScoreTypeScript} />
+    <CodeSnippet language="typescript" marker="score-event" code={highScoreTS} />
   </TabItem>
 </Tabs>
 
@@ -106,10 +105,10 @@ Our handler maintains a single piece of state per user: their current high score
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" marker="handler-struct" code={highScoreMain} />
+    <CodeSnippet language="go" marker="handler-struct" code={highScoreGo} />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
-    <CodeSnippet language="typescript" marker="handler-struct" code={highScoreTypeScript} />
+    <CodeSnippet language="typescript" marker="handler-struct" code={highScoreTS} />
   </TabItem>
 </Tabs>
 
@@ -122,10 +121,10 @@ the events ("event time").
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" marker="key-event" code={highScoreMain} />
+    <CodeSnippet language="go" marker="key-event" code={highScoreGo} />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
-    <CodeSnippet language="typescript" marker="key-event" code={highScoreTypeScript} />
+    <CodeSnippet language="typescript" marker="key-event" code={highScoreTS} />
   </TabItem>
 </Tabs>
 
@@ -138,10 +137,10 @@ handled by `OnEvent`. In this method we:
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" marker="on-event" code={highScoreMain} />
+    <CodeSnippet language="go" marker="on-event" code={highScoreGo} />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
-    <CodeSnippet language="typescript" marker="on-event" code={highScoreTypeScript} />
+    <CodeSnippet language="typescript" marker="on-event" code={highScoreTS} />
   </TabItem>
 </Tabs>
 
@@ -151,10 +150,10 @@ Finally, we configure and run our job.
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" marker="main" code={highScoreMain} />
+    <CodeSnippet language="go" marker="main" code={highScoreGo} />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
-    <CodeSnippet language="typescript" marker="main" code={highScoreTypeScript} />
+    <CodeSnippet language="typescript" marker="main" code={highScoreTS} />
   </TabItem>
 </Tabs>
 

@@ -3,13 +3,13 @@ sidebar_position: 1
 title: Getting Started
 ---
 
+import quickStartGo from '!!raw-loader!@site/examples/quick-start-go/main.go';
+import quickStartTS from '!!raw-loader!@site/examples/quick-start-ts/index.ts';
 import { DownloadLinks } from '@site/src/components/DownloadLinks';
 import { currentVersion } from '@site/src/constants';
 import CodeBlock from '@theme/CodeBlock';
-import quickStartMain from '!!raw-loader!@site/examples/quickstart/main.go';
-import quickStartTypeScript from '!!raw-loader!@site/examples/ts/quickstart/index.ts';
-import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import Tabs from '@theme/Tabs';
 
 # Getting Started
 
@@ -73,10 +73,10 @@ running.
 
 <Tabs>
    <TabItem value="go" label="Go">
-      <CodeBlock language="go" title="myjob/main.go">{quickStartMain}</CodeBlock>
+      <CodeBlock language="go" title="myjob/main.go">{quickStartGo}</CodeBlock>
    </TabItem>
    <TabItem value="typescript" label="TypeScript">
-      <CodeBlock language="typescript" title="myjob/index.ts">{quickStartTypeScript}</CodeBlock>
+      <CodeBlock language="typescript" title="myjob/index.ts">{quickStartTS}</CodeBlock>
    </TabItem>
 </Tabs>
 

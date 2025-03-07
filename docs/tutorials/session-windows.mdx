@@ -2,13 +2,13 @@
 sidebar_position: 3
 ---
 
+import handlerGo from "!!raw-loader!@site/examples/session-window-go/handler.go";
+import testGo from "!!raw-loader!@site/examples/session-window-go/handler_test.go";
+import testTS from "!!raw-loader!@site/examples/session-window-ts/index.test.ts";
+import handlerTS from "!!raw-loader!@site/examples/session-window-ts/index.ts";
 import CodeSnippet from "@site/src/components/CodeSnippet";
-import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
-import sessionWindowHandler from "!!raw-loader!@site/examples/sessionwindow/handler.go";
-import sessionWindowTest from "!!raw-loader!@site/examples/sessionwindow/handler_test.go";
-import sessionWindowHandlerTypeScript from "!!raw-loader!@site/examples/ts/session-window/index.ts";
-import sessionWindowTestTypeScript from "!!raw-loader!@site/examples/ts/session-window/index.test.ts";
+import Tabs from "@theme/Tabs";
 
 # Session Windows
 
@@ -67,14 +67,14 @@ We'll convert these JSON objects into the following types:
   <TabItem value="go" label="Go">
     <CodeSnippet
       language="go"
-      code={sessionWindowHandler}
+      code={handlerGo}
       marker="json-structs"
     />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
     <CodeSnippet
       language="typescript"
-      code={sessionWindowHandlerTypeScript}
+      code={handlerTS}
       marker="json-structs"
     />
   </TabItem>
@@ -87,12 +87,12 @@ Reduction's `KeyedEvent` type.
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" code={sessionWindowHandler} marker="key-event" />
+    <CodeSnippet language="go" code={handlerGo} marker="key-event" />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
     <CodeSnippet
       language="typescript"
-      code={sessionWindowHandlerTypeScript}
+      code={handlerTS}
       marker="key-event"
     />
   </TabItem>
@@ -111,14 +111,14 @@ encoding and decoding of the session data.
   <TabItem value="go" label="Go">
     <CodeSnippet
       language="go"
-      code={sessionWindowHandler}
+      code={handlerGo}
       marker="session-state"
     />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
     <CodeSnippet
       language="typescript"
-      code={sessionWindowHandlerTypeScript}
+      code={handlerTS}
       marker="session-state"
     />
   </TabItem>
@@ -136,14 +136,14 @@ Our handler uses:
   <TabItem value="go" label="Go">
     <CodeSnippet
       language="go"
-      code={sessionWindowHandler}
+      code={handlerGo}
       marker="handler-struct"
     />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
     <CodeSnippet
       language="typescript"
-      code={sessionWindowHandlerTypeScript}
+      code={handlerTS}
       marker="handler-struct"
     />
   </TabItem>
@@ -159,12 +159,12 @@ In the `OnEvent` method, we'll either:
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" code={sessionWindowHandler} marker="on-event" />
+    <CodeSnippet language="go" code={handlerGo} marker="on-event" />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
     <CodeSnippet
       language="typescript"
-      code={sessionWindowHandlerTypeScript}
+      code={handlerTS}
       marker="on-event"
     />
   </TabItem>
@@ -184,12 +184,12 @@ state:
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" code={sessionWindowHandler} marker="on-timer" />
+    <CodeSnippet language="go" code={handlerGo} marker="on-timer" />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
     <CodeSnippet
       language="typescript"
-      code={sessionWindowHandlerTypeScript}
+      code={handlerTS}
       marker="on-timer"
     />
   </TabItem>
@@ -205,12 +205,12 @@ sink for testing.
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" code={sessionWindowTest} marker="job-setup" />
+    <CodeSnippet language="go" code={testGo} marker="job-setup" />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
     <CodeSnippet
       language="typescript"
-      code={sessionWindowTestTypeScript}
+      code={testTS}
       marker="job-setup"
     />
   </TabItem>
@@ -220,12 +220,12 @@ Then we create a test run with events to test our handler:
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" code={sessionWindowTest} marker="test-run" />
+    <CodeSnippet language="go" code={testGo} marker="test-run" />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
     <CodeSnippet
       language="typescript"
-      code={sessionWindowTestTypeScript}
+      code={testTS}
       marker="test-run"
     />
   </TabItem>
@@ -235,12 +235,12 @@ And finally we assert that we get the sessions we expect:
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" code={sessionWindowTest} marker="assert" />
+    <CodeSnippet language="go" code={testGo} marker="assert" />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
     <CodeSnippet
       language="typescript"
-      code={sessionWindowTestTypeScript}
+      code={testTS}
       marker="assert"
     />
   </TabItem>
@@ -258,14 +258,14 @@ We can add a new condition to our `OnEvent` handler for this requirement:
   <TabItem value="go" label="Go">
     <CodeSnippet
       language="go"
-      code={sessionWindowHandler}
+      code={handlerGo}
       marker="on-event-24h"
     />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
     <CodeSnippet
       language="typescript"
-      code={sessionWindowHandlerTypeScript}
+      code={handlerTS}
       marker="on-event-24h"
     />
   </TabItem>

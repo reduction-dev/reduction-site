@@ -2,13 +2,13 @@
 sidebar_position: 1
 ---
 
+import handlerGo from '!!raw-loader!@site/examples/tumbling-window-go/handler.go';
+import testGo from '!!raw-loader!@site/examples/tumbling-window-go/handler_test.go';
+import testTS from '!!raw-loader!@site/examples/tumbling-window-ts/index.test.ts';
+import handlerTS from '!!raw-loader!@site/examples/tumbling-window-ts/index.ts';
 import CodeSnippet from '@site/src/components/CodeSnippet';
-import tumblingWindowHandler from '!!raw-loader!@site/examples/tumblingwindow/handler.go';
-import tumblingWindowHandlerTypeScript from '!!raw-loader!@site/examples/ts/tumbling-window/index.ts';
-import tumblingWindowTest from '!!raw-loader!@site/examples/tumblingwindow/handler_test.go';
-import tumblingWindowTestTypeScript from '!!raw-loader!@site/examples/ts/tumbling-window/index.test.ts';
-import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import Tabs from '@theme/Tabs';
 
 # Tumbling Windows
 
@@ -62,10 +62,10 @@ internally.
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" code={tumblingWindowHandler} marker="key-event" />
+    <CodeSnippet language="go" code={handlerGo} marker="key-event" />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
-    <CodeSnippet language="typescript" code={tumblingWindowHandlerTypeScript} marker="key-event" />
+    <CodeSnippet language="typescript" code={handlerTS} marker="key-event" />
   </TabItem>
 </Tabs>
 
@@ -93,10 +93,10 @@ each tumbling window.
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" code={tumblingWindowHandler} marker="handler" />
+    <CodeSnippet language="go" code={handlerGo} marker="handler" />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
-    <CodeSnippet language="typescript" code={tumblingWindowHandlerTypeScript} marker="handler" />
+    <CodeSnippet language="typescript" code={handlerTS} marker="handler" />
   </TabItem>
 </Tabs>
 
@@ -112,10 +112,10 @@ to fire on the next minute.
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" code={tumblingWindowHandler} marker="on-event" />
+    <CodeSnippet language="go" code={handlerGo} marker="on-event" />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
-    <CodeSnippet language="typescript" code={tumblingWindowHandlerTypeScript} marker="on-event" />
+    <CodeSnippet language="typescript" code={handlerTS} marker="on-event" />
   </TabItem>
 </Tabs>
 
@@ -127,10 +127,10 @@ when a timer expires.
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" code={tumblingWindowHandler} marker="on-timer" />
+    <CodeSnippet language="go" code={handlerGo} marker="on-timer" />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
-    <CodeSnippet language="typescript" code={tumblingWindowHandlerTypeScript} marker="on-timer" />
+    <CodeSnippet language="typescript" code={handlerTS} marker="on-timer" />
   </TabItem>
 </Tabs>
 
@@ -154,10 +154,10 @@ Let's start the test by setting up our job:
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" code={tumblingWindowTest} marker="job-setup" />
+    <CodeSnippet language="go" code={testGo} marker="job-setup" />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
-    <CodeSnippet language="typescript" code={tumblingWindowTestTypeScript} marker="job-setup" />
+    <CodeSnippet language="typescript" code={testTS} marker="job-setup" />
   </TabItem>
 </Tabs>
 
@@ -166,10 +166,10 @@ watermark.
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" code={tumblingWindowTest} marker="test-run" />
+    <CodeSnippet language="go" code={testGo} marker="test-run" />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
-    <CodeSnippet language="typescript" code={tumblingWindowTestTypeScript} marker="test-run" />
+    <CodeSnippet language="typescript" code={testTS} marker="test-run" />
   </TabItem>
 </Tabs>
 
@@ -183,10 +183,10 @@ Then we check the memory sink for the events we expect to have been emitted.
 
 <Tabs groupId="language">
   <TabItem value="go" label="Go">
-    <CodeSnippet language="go" code={tumblingWindowTest} marker="assert" />
+    <CodeSnippet language="go" code={testGo} marker="assert" />
   </TabItem>
   <TabItem value="typescript" label="TypeScript">
-    <CodeSnippet language="typescript" code={tumblingWindowTestTypeScript} marker="assert" />
+    <CodeSnippet language="typescript" code={testTS} marker="assert" />
   </TabItem>
 </Tabs>
 
