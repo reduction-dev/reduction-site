@@ -22,3 +22,6 @@ yarn-error.log*
 # Cloudformation
 .wrangler
 .dev.vars
+
+# Review output for LLMs to read
+/review
