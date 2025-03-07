@@ -31,7 +31,7 @@
     "raw-loader": "^4.0.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "reduction-ts": "../reduction-ts",
+    "reduction-ts": "*",
     "turndown": "^7.2.0"
   },
   "devDependencies": {
