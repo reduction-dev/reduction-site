@@ -3,3 +3,6 @@ storage
 
 # the built binary
 highscore
+
+# events fifo pipe for tutorial
+events

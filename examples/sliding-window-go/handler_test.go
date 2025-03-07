@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"slidingwindow"
+	slidingwindow "reduction.dev/site/examples/sliding-window-go"
 
 	"github.com/stretchr/testify/assert"
 	"reduction.dev/reduction-go/connectors/embedded"

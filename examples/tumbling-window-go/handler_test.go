@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"tumblingwindow"
+	tumblingwindow "reduction.dev/site/examples/tumbling-window-go"
 
 	"github.com/stretchr/testify/assert"
 	"reduction.dev/reduction-go/connectors/embedded"

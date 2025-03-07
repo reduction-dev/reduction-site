@@ -1,2 +1,5 @@
 # The build binary
 highscore
+
+# The events fifo pipe for the tutorial
+events

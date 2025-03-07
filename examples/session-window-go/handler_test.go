@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"sessionwindow"
+	sessionwindow "reduction.dev/site/examples/session-window-go"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

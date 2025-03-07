@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -e
+
+go test ./...
+(cd ./examples/quick-start-go && go build -o myjob)
+(cd ./examples/high-score-go && go build -o highscore)
+
+bun test
+(cd ./examples/quick-start-ts && bun build --compile --outfile=quickstart index.ts)
+(cd ./examples/high-score-ts && bun build --compile --outfile=highscore index.ts)
