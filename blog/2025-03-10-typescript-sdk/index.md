@@ -1,3 +1,7 @@
+---
+slug: typescript-sdk
+---
+
 # The TypeScript SDK
 
 Making good on the promise of multi-language support, Reduction now has a
