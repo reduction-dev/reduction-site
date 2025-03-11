@@ -74,8 +74,9 @@ The new format embraces the `oneof` Protocol Buffers patten where the object key
   {
     "id": "SourceID",
     "embedded": {
-      "splitCount": 1,
-      "batchSize": 10
+      "batchSize": 1000,
+      "generator": "inc_nums",
+      "splitCount": 2
     }
   }
 ]
