@@ -74,7 +74,7 @@ By owning more, I've seen teams increase their agency:
 How can teams take on _more_ responsibilities and still do better than several
 specialized teams? For one, the coordination overhead goes to near zero.
 Meetings become 5 minute discussions across a desk, Slack messages become
-thoughts. 
+thoughts.
 
 And good engineering teams love to automating things:
 
@@ -98,7 +98,7 @@ the resulting data challenges associated with that:
 legitimate ones
 - You've got a lot of valuable data but efficiently providing recommendations or
 audience engagement metrics requires new tools
-- When moneys is flowing through your software you need to shut down fraud fast
+- When money is flowing through your software you need to shut down fraud fast
 
 Traditionally, the answer has been more specialists: Data Analysts, Data
 Engineers, Data Scientists. But the principles of the data tooling pioneered at
