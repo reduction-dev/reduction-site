@@ -5,7 +5,7 @@ slug: typescript-sdk
 # The TypeScript SDK
 
 Making good on the promise of multi-language support, Reduction now has a
-TypeScript SDK ([github repository][reduction-ts-repo]).
+TypeScript SDK ([github repository](https://github.com/reduction-dev/reduction-ts)).
 
 Getting back into the Node ecosystem, I am _loving_ [Bun][bun] and think you
 should use it with Reduction if you can. You can get started by by initializing
@@ -15,6 +15,8 @@ a new project and installing `reduction-ts`:
 bun init
 bun add reduction-ts
 ```
+
+<!-- truncate -->
 
 Then checkout the [Getting Started guide][getting-started] to run your first
 streaming job locally.
@@ -104,7 +106,6 @@ I'm sure there's some easy performance wins with the new SDK waiting but for now
 I'm happy to see that both SDKs should be able to support 1M events/sec jobs in
 production.
 
-[reduction-ts-repo]: https://github.com/reduction-dev/reduction-ts
 [bun]: http://bun.sh/
 [getting-started]: https://reduction.dev/docs/getting-started/
 [jobconfig-proto]:
