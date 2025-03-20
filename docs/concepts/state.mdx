@@ -15,7 +15,7 @@ object storage (like S3) for persistence.
 LSM databases are write-optimized which means that they sacrifice some read
 performance for faster writes. This is a good trade-off for many cases because
 reading is easier to scale than writing. It's not a good fit for publishing blog
-posts (one write for many reads) but it's great for processing events streams.
+posts (one write for many reads) but it's great for processing event streams.
 
 Appending to a log is a simple way to achieve $O(1)$ write performance and
 that's how DKV and most LSM databases start.
@@ -30,10 +30,10 @@ $ echo '{ "name": "Tim" }' >> wal.txt
 $ echo '{ "name": "Suzy" }' >> wal.txt
 ```
 
-This is called a Write Ahead Log (WAL) because it contains writes that
-happen before writing to a more permanent database structure, but it can be
-helpful to think of the WAL as the foundation for DKV and the other structures
-as layers of optimizations on top of the log.
+This is called a Write Ahead Log (WAL) because it contains writes that happen
+before writing to a more permanent database structure, but it can be helpful to
+think of the WAL as the foundation for DKV and the other structures as layers of
+optimizations on top of the log.
 
 Each entry in the DKV WAL contains:
 
@@ -42,13 +42,12 @@ Each entry in the DKV WAL contains:
 - A tombstone marker byte (deletes need to be logged too!)
 - The variable length value (excluded for a delete)
 
-DVK's use of cloud storage as the primary data store instead of local disks
-separates a job's compute from its storage so that the clusters doesn't need to be
-scaled to accommodate more data. This decision means that performing a write for
-each record added to the WAL is infeasible due to per-request latency and cost.
-Ultimately DKV relies on distributed checkpointing for recovery which makes
-buffering the WAL and flushing it during the asynchronous phase of the
-checkpoint process a natural approach.
+DKV uses cloud storage as the primary data store instead of local disks. This
+approach separates a job's compute from its storage and eliminates the need to
+scale clusters for data capacity but it also makes writing each record directly
+to the WAL infeasible due to per-request latency and cost. Instead, DKV buffers
+the WAL and flushes it during the asynchronous phase of checkpointing which is a
+natural fit for Reduction's distributed checkpointing system.
 
 Although writing to this log is fast, reading from it is $O(n)$, getting slower
 the larger the log gets. For faster reads we need a different in-memory data
@@ -56,12 +55,10 @@ structure.
 
 ## MemTables
 
-The term memTable comes from LevelDB (and probably from somewhere before that)
-and is often used to describe the in-memory representation of recently written
-data. In most LSM databases memTables use
-[Skip Lists](https://en.wikipedia.org/wiki/Skip_list) to store data. DKV uses
-[Zip Trees](https://arxiv.org/abs/1806.06726) which have the same
-performance characteristics but are easier for the author to understand. Zip
+The term memTable comes from [LevelDB] (and probably from somewhere before that)
+and describes the in-memory representation of recently written data. In most LSM
+databases, memTables use [Skip Lists] to store data. DKV uses [Zip Trees] which
+have the same performance characteristics but are easier to understand. Zip
 Trees are binary search trees organized according to a randomly assigned "rank"
 value. Writing and reading are both $O(\log n)$ operations.
 
@@ -70,14 +67,14 @@ better querying.
 
 From a querying perspective, MemTables are like sorted maps. Records can be read
 efficiently in ascending order which allows grouping similar keys together.
-Using this property, Reduction can store state maps as multiple entries in DVK
+Using this property, Reduction can store state maps as multiple entries in DKV
 with a shared key prefix.
 
 ## SSTables
 
 Once the current MemTable reaches its size limit, DKV rotates the table, making
-it immutable (a "sealed" memTable) and then flushing the table to
-persistent storage.
+it immutable (a "sealed" memTable) and then flushing the table to persistent
+storage.
 
 Rotating memTables has a synchronous and asynchronous phase. As soon as the
 memTable is full, DKV performs a quick operation to instantiate a blank memTable
@@ -85,10 +82,12 @@ for writing. Then, in a background task, the sealed memTables are flushed to
 long-term storage.
 
 **Synchronous Phase**
+
 - Create a new memtable and seal the previous one
 - Create a new write buffer in the WAL
 
 **Asynchronous Phase**
+
 - Write sealed memTables as SSTables to storage
 - Create a new immutable copy of `LevelList` object with the new SSTables
 - Truncate the WAL up to the latest sequence number in the `LevelList`
@@ -156,7 +155,7 @@ together we need a process to continually organize and clean our data.
 ## Compaction
 
 DKV organizes tables into tiers where each tier holds an ascending list of keys
-split across the tables. The RocksDB project calls this organization in each
+split across the tables. The [RocksDB] project calls this organization in each
 level a "sorted run". The first tier (level 0) is an exception because it
 contains newly flushed SSTables that haven't been reprocessed to create the
 sorted list of keys across tables.
@@ -197,11 +196,11 @@ key-b PUT value-2
 
 Our WAL records contain the full history of put and delete operations and are
 deleted once DKV persists all of their data to SSTables. The memTables are
-naturally compacted as their zip trees are mutation and flushed to SSTables. And
+naturally compacted as their Zip Trees are mutated and flushed to SSTables. And
 then the compaction process continually organizes data within sorted runs
 spanning SSTables.
 
-DVK uses two separate compaction triggers for SSTables:
+DKV uses two separate compaction triggers for SSTables:
 
 1. Reaching a configured number of recent, tier 0 tables begins a process to
    move data to larger data tiers while maintaining a target data size at each
@@ -213,7 +212,7 @@ DVK uses two separate compaction triggers for SSTables:
 
 DKV's recovery approach is focused on the specific use case of distributed
 checkpointing backed by cloud storage. The Reduction job manager and worker
-nodes start a checkpoint by requesting a new checkpoint from each DVK instance
+nodes start a checkpoint by requesting a new checkpoint from each DKV instance
 for a shared ID. DKV instances respond with a URI to a checkpoint manifest once
 their checkpoint is complete.
 
@@ -223,11 +222,13 @@ database operations can continue uninterrupted while the IO work happens in the
 background.
 
 **Synchronous Phase**
+
 - Rotate the WAL, creating a new WAL object and sealing the old
 - Hold a reference to current immutable `LevelList` object of SSTables
 - Create a checkpoint object with the WAL and `LevelList`.
 
 **Asynchronous Phase**
+
 - Save the WAL to storage
 - Save the checkpoint manifest file to storage
 
@@ -249,8 +250,8 @@ instances to see if they are still using the file.
 
 ## State Specs and DKV
 
-The State Specs from Reduction jobs define how DKV will be updated and queried.
-Consider this state spec for a Reduction Job:
+The State Specs in the Reduction job configurations define how DKV will be
+updated and queried. Consider this state spec for a Reduction Job:
 
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
@@ -274,22 +275,24 @@ import TabItem from "@theme/TabItem";
 For an `onEvent` call with a `KeyedEvent` keyed by `"user-123"`, DKV will create
 a `ScanPrefix` query with a composite key.
 
-:::note[Pseudo-values and pseudocode ahead]
+:::info[Pseudo-values and pseudocode ahead]
+
 All examples here use a pseudo string representation of keys and values but know
 that DKV stores arbitrarily-encoded binary data. The `dkvBD` operations are also
 pseudocode for explanation.
+
 :::
 
 ```javascript
 dkvDB.scanPrefix("<key-group>|<schema-byte>|user-123|state-id");
 
 // returned entries:
-//   256|0|user-id|state-id|map-key-1|map-value-1
-//   256|0|user-id|state-id|map-key-1|map-value-1
+//   256|0|user-123|state-id|map-key-1|map-value-1
+//   256|0|user-123|state-id|map-key-2|map-value-2
 //   ...
 ```
 
-Then when you set a value (`new-value`) for a key `map-key-1` in the map, DVK
+Then when you set a value (`new-value`) for a key `map-key-1` in the map, DKV
 will translate that operation to a `put` call:
 
 ```javascript
@@ -312,7 +315,7 @@ A query for the next set of expired timers looks like this:
 ```javascript
 const expiredTimers = [];
 for (const [key, _] of dkvDB.scanPrefix("<key-group>|<schema-byte>")) {
-  if timestampOf(key) < currentWatermark {
+  if (timestampOf(key) < currentWatermark) {
     expiredTimers.push(key);
   } else {
     break;
@@ -327,12 +330,17 @@ for (const [key, _] of dkvDB.scanPrefix("<key-group>|<schema-byte>")) {
 
 You'll notice that this query only searched within one `<key-group>`. To return
 timers across all subject keys and key groups, Reduction Operators manage
-parallel scans for each of their managed key groups. This is one of the many
-reasons that the Reduction organizes the unbounded space of possible subject
-keys into a finite set of key groups.
+parallel scans for each of their managed key groups. This is one of the reasons
+that Reduction organizes the unbounded space of possible subject keys into a
+finite set of key groups.
 
 Setting a timer for a given subject key results in a `put` operation for DKV:
 
 ```javascript
-dkvDB.put("<key-group>|<schema-byte>|<timestamp>|user-123", "")
+dkvDB.put("<key-group>|<schema-byte>|<timestamp>|user-123", "");
 ```
+
+[Skip Lists]: https://en.wikipedia.org/wiki/Skip_list
+[Zip Trees]: https://arxiv.org/abs/1806.06726
+[LevelDB]: https://github.com/google/leveldb
+[RocksDB]: https://rocksdb.org/
