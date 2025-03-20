@@ -166,15 +166,15 @@ but allows more tables to accumulate in lower tiers.
 
 ```
 Level 0:  [j-w] [a-r] [n-z]      (newest tables with overlapping key ranges)
-            ↓     ↓
+            ↓     ↓     ↓
 Level 1:  [a-m] [n-z]            (tables sorted by key range)
             ↓     ↓
 Level 2:  [a-z]
             ↓
 Level 3:  [a-o] [p-z]
-            ↓     ↓     ↓     ↓
+            ↓     ↓
 Level 4:  [a-f] [g-m] [o-s] [t-z]
-            ↓     ↓     ↓
+            ↓     ↓     ↓     ↓
 Level 5:  [a-h] [i-p] [q-z]      (oldest tables)
 ```
 
