@@ -21,7 +21,7 @@ func (h *Handler) OnEvent(ctx context.Context, subject rxn.Subject, event rxn.Ke
 	count := h.countSpec.StateFor(subject)
 	count.Set(count.Value() + 1)
 	if count.Value()%100_000 == 0 {
-		h.sink.Collect(ctx, []byte(fmt.Sprintf("Count: %d", count.Value())))
+		h.sink.Collect(ctx, []byte(fmt.Sprintf("Count: %d\n", count.Value())))
 	}
 	return nil
 }

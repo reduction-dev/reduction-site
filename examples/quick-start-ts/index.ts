@@ -13,7 +13,7 @@ function createHandler(op: topology.Operator, sink: stdio.Sink) {
       const count = countSpec.stateFor(subject);
       count.setValue(count.value + 1);
       if (count.value % 100_000 === 0) {
-        sink.collect(subject, Buffer.from(`Count: ${count.value}`));
+        sink.collect(subject, Buffer.from(`Count: ${count.value}\n`));
       }
     },
 
