@@ -85,7 +85,10 @@ func (h *Handler) OnTimerExpired(ctx context.Context, subject rxn.Subject, times
 // snippet-start: main
 func main() {
 	// Configure the job
-	job := &topology.Job{WorkerCount: 1, WorkingStorageLocation: "storage"}
+	job := &topology.Job{
+		WorkerCount:            topology.IntValue(1),
+		WorkingStorageLocation: topology.StringValue("storage"),
+	}
 
 	// Create a source that reads from stdin
 	source := stdio.NewSource(job, "Source", &stdio.SourceParams{

@@ -61,14 +61,14 @@ func (h *Handler) OnTimerExpired(ctx context.Context, subject rxn.Subject, times
 func main() {
 	// Configure the job
 	job := &topology.Job{
-		WorkingStorageLocation: "STORAGE_PATH",
-		WorkerCount:            2,
+		WorkingStorageLocation: topology.StringParam("STORAGE_PATH"),
+		WorkerCount:            topology.IntParam("WORKER_COUNT"),
 		KeyGroupCount:          256,
 	}
 
 	// Create a source that reads from stdin
 	source := kinesis.NewSource(job, "Source", &kinesis.SourceParams{
-		StreamARN: "KINESIS_STREAM_ARN",
+		StreamARN: topology.StringParam("KINESIS_STREAM_ARN"),
 		KeyEvent:  KeyEvent,
 	})
 

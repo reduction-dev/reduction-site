@@ -33,8 +33,8 @@ func (h *Handler) OnTimerExpired(ctx context.Context, subject rxn.Subject, times
 func main() {
 	// Configure the job
 	job := &topology.Job{
-		WorkerCount:            1,
-		WorkingStorageLocation: "storage",
+		WorkerCount:            topology.IntValue(1),
+		WorkingStorageLocation: topology.StringValue("storage"),
 	}
 	sink := stdio.NewSink(job, "Sink")
 	source := embedded.NewSource(job, "Source", &embedded.SourceParams{

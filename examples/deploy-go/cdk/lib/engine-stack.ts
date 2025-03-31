@@ -2,8 +2,10 @@ import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecr_assets from 'aws-cdk-lib/aws-ecr-assets';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
+import * as kinesis from 'aws-cdk-lib/aws-kinesis';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import { Asset } from 'aws-cdk-lib/aws-s3-assets';
+import * as customResources from 'aws-cdk-lib/custom-resources';
 import { Construct } from 'constructs';
 
 interface EngineStackProps extends cdk.StackProps {
@@ -39,7 +41,7 @@ export class EngineStack extends cdk.Stack {
       },
     });
 
-    // Create engine task definition which will run the job manager and worker
+    // Create engine task definition to run the job manager and worker
     const engineTask = new ecs.FargateTaskDefinition(this, 'EngineTask', {
       memoryLimitMiB: 512,
       cpu: 256,
@@ -56,6 +58,12 @@ export class EngineStack extends cdk.Stack {
     });
     jobConfigAsset.grantRead(engineTask.taskRole);
 
+    const kinesisStream = new kinesis.Stream(this, 'JobStream', {
+      streamName: 'JobStream',
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+    kinesisStream.grantWrite(engineTask.taskRole);
+
     engineTask.addContainer('JobManagerContainer', {
       image: ecs.ContainerImage.fromDockerImageAsset(reductionImage),
       logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'job-manager' }),
@@ -63,8 +71,8 @@ export class EngineStack extends cdk.Stack {
       command: ['job', jobConfigAsset.s3ObjectUrl],
       environment: {
         REDUCTION_PARAM_STORAGE_PATH: bucket.s3UrlForObject("/working-storage"),
-        REDUCTION_PARAM_KINESIS_STREAM_ARN: "",
-      }
+        REDUCTION_PARAM_KINESIS_STREAM_ARN: kinesisStream.streamArn,
+      },
     });
 
     engineTask.addContainer('WorkerContainer', {
@@ -89,5 +97,42 @@ export class EngineStack extends cdk.Stack {
         weight: 1,
       }],
     });
+
+    // Add data to kinesis stream when deploying
+    const cr = new customResources.AwsCustomResource(this, 'SendKinesisMessageResource', {
+      onUpdate: {
+        service: 'Kinesis',
+        action: 'putRecord',
+        parameters: {
+          Data: stoppingByWoods,
+          PartitionKey: '1',
+          StreamARN: kinesisStream.streamArn,
+        },
+        physicalResourceId: customResources.PhysicalResourceId.of(Date.now().toString()),
+      },
+      policy: customResources.AwsCustomResourcePolicy.fromSdkCalls({
+        resources: customResources.AwsCustomResourcePolicy.ANY_RESOURCE,
+      }),
+    });
+    kinesisStream.grantReadWrite(cr);
   }
 }
+
+const stoppingByWoods = `
+Whose woods these are I think I know.
+His house is in the village though;
+He will not see me stopping here
+To watch his woods fill up with snow.
+My little horse must think it queer
+To stop without a farmhouse near
+Between the woods and frozen lake
+The darkest evening of the year.
+He gives his harness bells a shake
+To ask if there is some mistake.
+The only other sound's the sweep
+Of easy wind and downy flake.
+The woods are lovely, dark and deep,
+But I have promises to keep,
+And miles to go before I sleep,
+And miles to go before I sleep.
+`;
