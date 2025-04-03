@@ -13,9 +13,20 @@ class DemoEnvironment extends Construct {
     new EngineStack(this, 'Engine', {
       env,
       jobConfigPath: handler.jobConfigPath,
+      handlerService: handler.service,
     });
   }
 }
 
 const app = new cdk.App();
 new DemoEnvironment(app, 'Demo');
+
+cdk.Annotations.of(app).acknowledgeWarning(
+  "@aws-cdk/aws-ec2:ipv4IgnoreEgressRule",
+  [
+    "long-standing CDK issue: ",
+    "- https://github.com/aws/aws-cdk/issues/9565",
+    "- https://github.com/aws/aws-cdk/issues/9740",
+    "- https://github.com/aws/aws-cdk/issues/24109",
+    "- "
+  ].join("\n"))

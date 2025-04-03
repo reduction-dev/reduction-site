@@ -7,9 +7,11 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import { Asset } from 'aws-cdk-lib/aws-s3-assets';
 import * as customResources from 'aws-cdk-lib/custom-resources';
 import { Construct } from 'constructs';
+import { RxnHandler } from './handler-stack';
 
 interface EngineStackProps extends cdk.StackProps {
   jobConfigPath: string;
+  handlerService: RxnHandler
 }
 
 export class EngineStack extends cdk.Stack {
@@ -62,7 +64,7 @@ export class EngineStack extends cdk.Stack {
       streamName: 'JobStream',
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
-    kinesisStream.grantWrite(engineTask.taskRole);
+    kinesisStream.grantReadWrite(engineTask.taskRole);
 
     engineTask.addContainer('JobManagerContainer', {
       image: ecs.ContainerImage.fromDockerImageAsset(reductionImage),
@@ -71,6 +73,7 @@ export class EngineStack extends cdk.Stack {
       command: ['job', jobConfigAsset.s3ObjectUrl],
       environment: {
         REDUCTION_PARAM_STORAGE_PATH: bucket.s3UrlForObject("/working-storage"),
+        REDUCTION_PARAM_WORKER_COUNT: '1',
         REDUCTION_PARAM_KINESIS_STREAM_ARN: kinesisStream.streamArn,
       },
     });
@@ -80,12 +83,12 @@ export class EngineStack extends cdk.Stack {
       logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'worker' }),
       command: ['worker',
         '--job-addr', 'localhost:8081',
-        '--handler-addr', 'handler.reduction.local:8080',
+        '--handler-addr', props.handlerService.hostname,
       ],
     });
 
     // Create engine service with service discovery
-    new ecs.FargateService(this, 'EngineService', {
+    const service = new ecs.FargateService(this, 'EngineService', {
       cluster,
       taskDefinition: engineTask,
       desiredCount: 1,
@@ -97,6 +100,7 @@ export class EngineStack extends cdk.Stack {
         weight: 1,
       }],
     });
+    props.handlerService.connect(service);
 
     // Add data to kinesis stream when deploying
     const cr = new customResources.AwsCustomResource(this, 'SendKinesisMessageResource', {

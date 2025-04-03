@@ -49,7 +49,7 @@ func (h *Handler) OnEvent(ctx context.Context, subject rxn.Subject, keyedEvent r
 	wordCount.Set(wordCount.Value() + 1)
 
 	// Collect the result
-	h.Sink.Collect(ctx, fmt.Appendf(nil, "%s: %d", string(subject.Key()), wordCount.Value()))
+	h.Sink.Collect(ctx, fmt.Appendf(nil, "%s: %d\n", string(subject.Key()), wordCount.Value()))
 	return nil
 }
 

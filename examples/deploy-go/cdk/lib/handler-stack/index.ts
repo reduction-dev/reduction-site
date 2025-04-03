@@ -6,8 +6,14 @@ import * as servicediscovery from 'aws-cdk-lib/aws-servicediscovery';
 import { Construct } from 'constructs';
 import path = require('path');
 
+export interface RxnHandler {
+  connect(connectable: ec2.IConnectable): void;
+  hostname: string;
+}
+
 export class HandlerStack extends cdk.Stack {
   public jobConfigPath: string;
+  public service: RxnHandler;
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -23,12 +29,13 @@ export class HandlerStack extends cdk.Stack {
 
     // Create CloudMap namespace for service discovery
     const namespace = new servicediscovery.PrivateDnsNamespace(this, 'HandlerNamespace', {
-      name: 'handlers.local',
+      name: 'reduction.local',
       vpc,
       description: 'Namespace for handler services',
     });
 
     // Build the Go executable for ARM
+    // TODOD: Probably should build in the Dockerfile
     Bun.spawnSync(['go', 'build', '-o', path.join(__dirname, 'deploy-go')], {
       cwd: '../',
       env: { ...process.env, GOOS: 'linux', GOARCH: 'arm64' },
@@ -75,14 +82,14 @@ export class HandlerStack extends cdk.Stack {
       healthCheck: {
         command: ['CMD-SHELL', 'curl -f http://[::]:8080/health || exit 1'],
         interval: cdk.Duration.seconds(30),
-        timeout: cdk.Duration.seconds(5),
+        timeout: cdk.Duration.seconds(3),
         retries: 3,
         startPeriod: cdk.Duration.seconds(3),
       },
     });
 
     // Create handler service with service discovery
-    new ecs.FargateService(this, 'HandlerService', {
+    const service = new ecs.FargateService(this, 'HandlerService', {
       cluster,
       taskDefinition,
       desiredCount: 1,
@@ -99,5 +106,11 @@ export class HandlerStack extends cdk.Stack {
       assignPublicIp: true,
       vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
     });
+    this.service = {
+      connect: (connectable: ec2.IConnectable) => {
+        connectable.connections.allowTo(service, ec2.Port.tcp(8080));
+      },
+      hostname: `handler.${namespace.namespaceName}:8080`,
+    }
   }
 }
