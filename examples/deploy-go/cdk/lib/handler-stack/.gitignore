@@ -1,5 +1,0 @@
-# The build job handler binary
-deploy-go
-
-# The job config artifact
-job.json

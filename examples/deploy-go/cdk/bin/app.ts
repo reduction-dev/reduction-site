@@ -1,32 +1,43 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
-import { EngineStack } from '../lib/engine-stack';
-import { HandlerStack } from '../lib/handler-stack';
-import { Construct } from 'constructs';
+import { ReductionStack } from '../lib/reduction-stack';
+import * as path from 'path';
 
-class DemoEnvironment extends Construct {
-  constructor(scope: Construct, id: string) {
-    super(scope, id);
-    const env = { account: "619071318835", region: "us-east-2" };
-
-    const handler = new HandlerStack(this, 'Handler', { env });
-    new EngineStack(this, 'Engine', {
-      env,
-      jobConfigPath: handler.jobConfigPath,
-      handlerService: handler.service,
-    });
+// Build the Go executable for ARM
+Bun.spawnSync(['go', 'build', '-o', 'deploy-go'], {
+  cwd: '../',
+  env: { ...process.env, GOOS: 'linux', GOARCH: 'arm64' },
+  onExit: (_proc, exitCode, _signalCode, error) => {
+    if (exitCode !== 0) {
+      throw new Error(`Failed to build Go executable: ${error}`);
+    }
   }
-}
+});
+
+// Write the handler's job.config file
+const jobConfigPath = path.resolve('../job.json');
+const jobConfigFile = Bun.file(jobConfigPath);
+Bun.spawnSync(['go', 'run', 'main.go', 'config'], {
+  cwd: '../',
+  stdout: jobConfigFile,
+  onExit: (_proc, exitCode, _signalCode, error) => {
+    if (exitCode !== 0) {
+      throw new Error(`Failed to build job.json: ${error}`);
+    }
+  },
+});
 
 const app = new cdk.App();
-new DemoEnvironment(app, 'Demo');
 
-cdk.Annotations.of(app).acknowledgeWarning(
-  "@aws-cdk/aws-ec2:ipv4IgnoreEgressRule",
-  [
-    "long-standing CDK issue: ",
-    "- https://github.com/aws/aws-cdk/issues/9565",
-    "- https://github.com/aws/aws-cdk/issues/9740",
-    "- https://github.com/aws/aws-cdk/issues/24109",
-    "- "
-  ].join("\n"))
+new ReductionStack(app, 'ReductionWordCountDemo', {
+  env: { account: "619071318835", region: "us-east-2" },
+
+  // A local file path to the job.json config
+  jobConfigPath,
+
+  // The handler Dockerfile is in this example directory
+  handlerDockerDir: path.resolve('..'),
+
+  // The reduction Dockerfile is in a go workspace sibling directory
+  reductionDockerDir: path.resolve('../../../../reduction'),
+});

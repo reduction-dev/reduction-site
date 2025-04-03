@@ -1,0 +1,7 @@
+node_modules
+
+# The job config artifact
+job.json
+
+# The binary executable
+deploy-go
