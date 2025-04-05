@@ -15,17 +15,12 @@ Bun.spawnSync(['go', 'build', '-o', 'deploy-go'], {
 });
 
 // Write the handler's job.config file
+const result = Bun.spawnSync(['go', 'run', 'main.go', 'config'], { cwd: '../' });
+if (!result.success) {
+  throw new Error(`Failed to build job.json: ${result.stderr.toString()}`);
+}
 const jobConfigPath = path.resolve('../job.json');
-const jobConfigFile = Bun.file(jobConfigPath);
-Bun.spawnSync(['go', 'run', 'main.go', 'config'], {
-  cwd: '../',
-  stdout: jobConfigFile,
-  onExit: (_proc, exitCode, _signalCode, error) => {
-    if (exitCode !== 0) {
-      throw new Error(`Failed to build job.json: ${error}`);
-    }
-  },
-});
+await Bun.write(jobConfigPath, result.stdout);
 
 const app = new cdk.App();
 
