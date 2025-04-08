@@ -63,7 +63,6 @@ func main() {
 	job := &topology.Job{
 		WorkingStorageLocation: topology.StringParam("STORAGE_PATH"),
 		WorkerCount:            topology.IntParam("WORKER_COUNT"),
-		KeyGroupCount:          256,
 	}
 
 	// Create a source that reads from stdin

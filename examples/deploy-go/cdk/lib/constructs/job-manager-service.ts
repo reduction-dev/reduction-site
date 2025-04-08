@@ -5,7 +5,6 @@ import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as kinesis from 'aws-cdk-lib/aws-kinesis';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3_assets from 'aws-cdk-lib/aws-s3-assets';
-import * as servicediscovery from 'aws-cdk-lib/aws-servicediscovery';
 import { Construct } from 'constructs';
 
 export interface JobManagerServiceProps {
@@ -53,16 +52,13 @@ const jobRpcPort = 8081;
  */
 export class JobManagerService extends Construct implements ec2.IConnectable {
   public readonly connections: ec2.Connections;
-  public readonly service: ecs.FargateService;
-  public readonly endpoint: string; // Add endpoint property to expose to other services
+  public readonly endpoint: string;
 
   constructor(scope: Construct, id: string, props: JobManagerServiceProps) {
     super(scope, id);
 
     // Create job manager task definition
     const taskDefinition = new ecs.FargateTaskDefinition(this, 'JobManagerTask', {
-      memoryLimitMiB: 512,
-      cpu: 256,
       runtimePlatform: {
         operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
         cpuArchitecture: ecs.CpuArchitecture.ARM64,
@@ -84,7 +80,7 @@ export class JobManagerService extends Construct implements ec2.IConnectable {
       },
     });
 
-    this.service = new ecs.FargateService(this, 'Default', {
+    const service = new ecs.FargateService(this, 'Default', {
       cluster: props.cluster,
       securityGroups: [props.securityGroup],
       taskDefinition,
@@ -101,7 +97,7 @@ export class JobManagerService extends Construct implements ec2.IConnectable {
         services: [{ portMappingName: 'job-rpc' }],
       },
     });
-    this.connections = this.service.connections;
+    this.connections = service.connections;
 
     // Store the endpoint for other services to use
     assert(props.cluster.defaultCloudMapNamespace, "Cluster must have a default Cloud Map namespace");

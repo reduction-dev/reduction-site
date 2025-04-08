@@ -60,11 +60,9 @@ export class WorkerService extends Construct implements ec2.IConnectable, iam.IG
     taskDefinition.addContainer('WorkerContainer', {
       image: ecs.ContainerImage.fromDockerImageAsset(props.reductionImage),
       logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'worker' }),
-      portMappings: [{ containerPort: 80, name: 'worker' }],
       command: ['worker',
         '--job-addr', props.jobManagerEndpoint,
-        '--handler-addr', props.handlerEndpoint,
-        '--port',  '80'],
+        '--handler-addr', props.handlerEndpoint],
     });
 
     this.service = new ecs.FargateService(this, 'Default', {
