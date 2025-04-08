@@ -1,19 +1,21 @@
+import assert from 'assert';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecr_assets from 'aws-cdk-lib/aws-ecr-assets';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as kinesis from 'aws-cdk-lib/aws-kinesis';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3_assets from 'aws-cdk-lib/aws-s3-assets';
+import * as servicediscovery from 'aws-cdk-lib/aws-servicediscovery';
 import { Construct } from 'constructs';
 
-export interface EngineServiceProps {
+export interface JobManagerServiceProps {
   /**
    * The ECS cluster to deploy to
    */
   cluster: ecs.ICluster;
 
   /**
-   * S3 bucket for checkpoint and DKV storage
+   * S3 bucket for checkpoints
    */
   bucket: s3.IBucket;
 
@@ -28,11 +30,6 @@ export interface EngineServiceProps {
   jobConfigAsset: s3_assets.Asset;
 
   /**
-   * The handler service endpoint including the port
-   */
-  handlerEndpoint: string;
-
-  /**
    * Kinesis stream for job source data
    */
   sourceStream: kinesis.IStream;
@@ -41,25 +38,29 @@ export interface EngineServiceProps {
    * The number of workers to run
    */
   workerCount: number;
+
+  /**
+   * The shared Reduction cluster security group
+   */
+  securityGroup: ec2.ISecurityGroup;
 }
 
 // The port the job manager listens on for worker communication
 const jobRpcPort = 8081;
 
 /**
- * An ECS Reduction Engine service
- *
- * This deploys cheaply with spot instances, ARM architecture, and the lowest
- * CPU and memory settings for Fargate.
+ * An ECS Job Manager service
  */
-export class EngineService extends Construct implements ec2.IConnectable {
+export class JobManagerService extends Construct implements ec2.IConnectable {
   public readonly connections: ec2.Connections;
+  public readonly service: ecs.FargateService;
+  public readonly endpoint: string; // Add endpoint property to expose to other services
 
-  constructor(scope: Construct, id: string, props: EngineServiceProps) {
+  constructor(scope: Construct, id: string, props: JobManagerServiceProps) {
     super(scope, id);
 
-    // Create engine task definition to run the job manager and worker
-    const taskDefinition = new ecs.FargateTaskDefinition(this, 'EngineTask', {
+    // Create job manager task definition
+    const taskDefinition = new ecs.FargateTaskDefinition(this, 'JobManagerTask', {
       memoryLimitMiB: 512,
       cpu: 256,
       runtimePlatform: {
@@ -74,7 +75,7 @@ export class EngineService extends Construct implements ec2.IConnectable {
     taskDefinition.addContainer('JobManagerContainer', {
       image: ecs.ContainerImage.fromDockerImageAsset(props.reductionImage),
       logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'job-manager' }),
-      portMappings: [{ containerPort: jobRpcPort }],
+      portMappings: [{ containerPort: jobRpcPort, name: 'job-rpc' }],
       command: ['job', props.jobConfigAsset.s3ObjectUrl],
       environment: {
         REDUCTION_PARAM_STORAGE_PATH: props.bucket.s3UrlForObject("/working-storage"),
@@ -83,26 +84,27 @@ export class EngineService extends Construct implements ec2.IConnectable {
       },
     });
 
-    taskDefinition.addContainer('WorkerContainer', {
-      image: ecs.ContainerImage.fromDockerImageAsset(props.reductionImage),
-      logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'worker' }),
-      command: ['worker',
-        '--job-addr', `localhost:${jobRpcPort}`,
-        '--handler-addr', props.handlerEndpoint],
-    });
-
-    const service = new ecs.FargateService(this, 'Default', {
+    this.service = new ecs.FargateService(this, 'Default', {
       cluster: props.cluster,
+      securityGroups: [props.securityGroup],
       taskDefinition,
-      desiredCount: props.workerCount,
+      desiredCount: 1,
       minHealthyPercent: 0,
+      enableExecuteCommand: true,
       assignPublicIp: true,
       vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
       capacityProviderStrategies: [{
         capacityProvider: 'FARGATE_SPOT',
         weight: 1,
       }],
+      serviceConnectConfiguration: {
+        services: [{ portMappingName: 'job-rpc' }],
+      },
     });
-    this.connections = service.connections;
+    this.connections = this.service.connections;
+
+    // Store the endpoint for other services to use
+    assert(props.cluster.defaultCloudMapNamespace, "Cluster must have a default Cloud Map namespace");
+    this.endpoint = `job-rpc.${props.cluster.defaultCloudMapNamespace?.namespaceName}:${jobRpcPort}`;
   }
 }

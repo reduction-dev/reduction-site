@@ -7,7 +7,8 @@ import * as kinesis from 'aws-cdk-lib/aws-kinesis';
 import * as crs from 'aws-cdk-lib/custom-resources';
 import * as ecr_assets from 'aws-cdk-lib/aws-ecr-assets';
 import { Construct } from 'constructs';
-import { EngineService } from './constructs/engine-service';
+import { JobManagerService } from './constructs/job-manager-service';
+import { WorkerService } from './constructs/worker-service';
 import { HandlerService } from './constructs/handler-service';
 import * as servicediscovery from 'aws-cdk-lib/aws-servicediscovery';
 
@@ -15,6 +16,7 @@ interface ReductionStackProps extends cdk.StackProps {
   jobConfigPath: string;
   handlerDockerDir: string;
   reductionDockerDir: string;
+  workerCount: number;
 }
 
 export class ReductionStack extends cdk.Stack {
@@ -60,18 +62,24 @@ export class ReductionStack extends cdk.Stack {
     const cluster = new ecs.Cluster(this, 'JobCluster', {
       vpc: ec2.Vpc.fromLookup(this, 'DefaultVPC', { isDefault: true }),
       containerInsightsV2: ecs.ContainerInsights.ENABLED,
+      defaultCloudMapNamespace: {
+        name: 'reduction.local',
+        type: servicediscovery.NamespaceType.DNS_PRIVATE,
+        useForServiceConnect: true,
+      }
     });
 
-    // A CloudMap namespace to let the engine call handler instances
-    const namespace = new servicediscovery.PrivateDnsNamespace(this, 'ReductionNamespace', {
-      name: 'reduction.local',
+    // A shared security group for Reduction services
+    const rxnSecurityGroup = new ec2.SecurityGroup(this, 'ReductionSecurityGroup', {
       vpc: cluster.vpc,
+      description: 'Security group for Reduction services',
+      allowAllOutbound: true,
     });
+    rxnSecurityGroup.addIngressRule(rxnSecurityGroup, ec2.Port.allTraffic(), 'Allow all communication between Reduction services');
 
     // The user-defined handler service
     const handlerService = new HandlerService(this, 'Handler', {
       cluster,
-      namespace,
       handlerImage: new ecr_assets.DockerImageAsset(this, 'HandlerImage', {
         directory: props.handlerDockerDir,
         buildArgs: { TARGET_ARCH: 'arm64' },
@@ -79,20 +87,39 @@ export class ReductionStack extends cdk.Stack {
       desiredCount: 1,
     });
 
-    // The Reduction engine service that calls the handler
-    const engineService = new EngineService(this, 'Engine', {
+    // Create Reduction image asset to be used by both services
+    const reductionImage = new ecr_assets.DockerImageAsset(this, 'ReductionImage', {
+      directory: props.reductionDockerDir,
+      buildArgs: { TARGET_ARCH: 'arm64' },
+    });
+
+    // The Reduction job manager service
+    const jobManagerService = new JobManagerService(this, 'JobManager', {
       cluster,
       bucket,
       sourceStream,
       jobConfigAsset,
-      handlerEndpoint: handlerService.endpoint,
-      reductionImage: new ecr_assets.DockerImageAsset(this, 'ReductionImage', {
-        directory: props.reductionDockerDir,
-        buildArgs: { TARGET_ARCH: 'arm64' },
-      }),
-      workerCount: 1,
+      reductionImage,
+      workerCount: props.workerCount,
+      securityGroup: rxnSecurityGroup,
     });
-    handlerService.connections.allowFrom(engineService, ec2.Port.allTcp());
+
+    // The Reduction worker service that calls the handler
+    const workerService = new WorkerService(this, 'Worker', {
+      cluster,
+      securityGroup: rxnSecurityGroup,
+      reductionImage,
+      handlerEndpoint: handlerService.endpoint,
+      jobManagerEndpoint: jobManagerService.endpoint,
+      workerCount: props.workerCount,
+    });
+    sourceStream.grantRead(workerService);
+
+    // Deploy the job manager first or Service Connect won't work.
+    workerService.node.addDependency(jobManagerService);
+
+    // Allow the workers to call the handler service
+    handlerService.connections.allowFrom(workerService, ec2.Port.allTcp());
   }
 }
 

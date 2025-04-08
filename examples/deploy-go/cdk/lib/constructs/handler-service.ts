@@ -2,19 +2,14 @@ import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecr_assets from 'aws-cdk-lib/aws-ecr-assets';
-import * as servicediscovery from 'aws-cdk-lib/aws-servicediscovery';
 import { Construct } from 'constructs';
+import assert from 'assert';
 
 export interface HandlerServiceProps {
   /**
    * The ECS cluster to deploy to
    */
   cluster: ecs.ICluster;
-
-  /**
-   * The ECS namespace to register with
-   */
-  namespace: servicediscovery.IPrivateDnsNamespace;
 
   /**
    * The Docker image asset for the Handler
@@ -31,7 +26,10 @@ export interface HandlerServiceProps {
 const handlerPort = 8080;
 
 /**
- * A Handler ECS service
+ * A Handler ECS service.
+ *
+ * The handler service is the user-defined service that the Reduction engine
+ * calls.
  */
 export class HandlerService extends Construct implements ec2.IConnectable {
   /**
@@ -59,7 +57,7 @@ export class HandlerService extends Construct implements ec2.IConnectable {
     taskDefinition.addContainer('Container', {
       image: ecs.ContainerImage.fromDockerImageAsset(props.handlerImage),
       logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'handler' }),
-      portMappings: [{ containerPort: handlerPort }],
+      portMappings: [{ containerPort: handlerPort, name: 'handler' }],
       command: ['start'],
       healthCheck: {
         command: ['CMD-SHELL', `curl -f http://[::]:${handlerPort}/health || exit 1`],
@@ -74,18 +72,18 @@ export class HandlerService extends Construct implements ec2.IConnectable {
       cluster: props.cluster,
       taskDefinition,
       desiredCount: props.desiredCount,
-      cloudMapOptions: {
-        name: 'handler',
-        dnsRecordType: servicediscovery.DnsRecordType.A,
-        cloudMapNamespace: props.namespace,
-      },
       capacityProviderStrategies: [{ capacityProvider: 'FARGATE_SPOT', weight: 1 }],
+      enableExecuteCommand: true,
       minHealthyPercent: 0,
       assignPublicIp: true,
       vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
+      serviceConnectConfiguration: {
+        services: [{ portMappingName: 'handler' }],
+      },
     });
     this.connections = service.connections;
 
-    this.endpoint = `handler.${props.namespace.namespaceName}:${handlerPort}`;
+    assert(props.cluster.defaultCloudMapNamespace, 'Default Cloud Map namespace not set on cluster');
+    this.endpoint = `handler.${props.cluster.defaultCloudMapNamespace?.namespaceName}:${handlerPort}`;
   }
 }
