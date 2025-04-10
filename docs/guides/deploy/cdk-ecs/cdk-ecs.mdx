@@ -1,0 +1,238 @@
+---
+sidebar_position: 3
+sidebar_label: "ECS with CDK"
+---
+
+import mainGo from "!!raw-loader!@site/examples/deploy-go/main.go";
+import cdkApp from "!!raw-loader!@site/examples/deploy-go/cdk/bin/app.ts";
+import cdkJobManagerService from "!!raw-loader!@site/examples/deploy-go/cdk/lib/constructs/job-manager-service.ts";
+import cdkWorkerService from "!!raw-loader!@site/examples/deploy-go/cdk/lib/constructs/worker-service.ts";
+import cdkHandlerService from "!!raw-loader!@site/examples/deploy-go/cdk/lib/constructs/handler-service.ts";
+import cdkReductionStack from "!!raw-loader!@site/examples/deploy-go/cdk/lib/reduction-stack.ts";
+import sendRecordsScript from "!!raw-loader!@site/examples/deploy-go/cdk/scripts/send-records.ts";
+import CodeSnippet from "@site/src/components/CodeSnippet";
+
+# Deploying to ECS With CDK
+
+This guide demonstrates how to deploy a Reduction cluster on AWS ECS using CDK.
+
+This example implements a basic "word count" job that reads data from a Kinesis
+stream and logs the count of each word whenever it changes.
+
+<details>
+  <summary>Word Count Reduction Job</summary>
+  <CodeSnippet language="go" code={mainGo} />
+</details>
+
+The demo code makes cost-friendly infrastructure decisions:
+
+- Deploys to public subnets to avoid the additional cost of NAT gateways
+  required for private subnets
+- Uses Fargate Spot instances with ARM CPU architecture
+- Sets retain policies to DESTROY to ensure all resources are removed when
+  deleting the stack
+- Uses AWS service discovery tools instead of load balancers
+
+<figure className="block mx-auto max-w-full pt-5">
+  <div className="flex justify-center">
+    ![diagram](./diagram.svg)
+  </div>
+  <figcaption className="italic text-center mt-2">Deployed Infrastructure</figcaption>
+</figure>
+
+
+## Tools Used
+
+- **[AWS CDK][cdk]**: An infrastructure as code tool that generates
+  CloudFormation templates.
+- **[Bun][bun]**: A Node-compatible runtime that executes the CDK code.
+- **[Go][go]**: The programming language used to write the Reduction job.
+- **[Docker][docker]**: Container technology used to package both the Reduction
+  Engine components and Handler service.
+- **[ECS][ecs]**: AWS's container orchestration service for deploying Docker
+  containers.
+- **[Fargate][fargate]**: A serverless compute engine for running containers.
+- **[Service Connect][service-connect]**: AWS's [Envoy][envoy] integration for
+  ECS that provides well-known addresses.
+
+[cdk]: https://aws.amazon.com/cdk/
+[bun]: https://bun.sh/
+[go]: https://go.dev/
+[docker]: https://www.docker.com/
+[ecs]: https://aws.amazon.com/ecs/
+[fargate]: https://aws.amazon.com/fargate/
+[service-connect]:
+  https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect.html
+[envoy]: https://www.envoyproxy.io/
+
+## Building Job Handler and Config
+
+The Reduction Handler code that you write defines the job's configuration and
+creates the Handler Service that the Reduction engine calls. To deploy you'll
+first want to build the handler code and write the job configuration file. You
+can do this anywhere in your CI process but in this example we'll build these
+artifacts during CDK synthesis.
+
+Building the handler executable:
+
+<CodeSnippet language="typescript" code={cdkApp} marker="build-handler" />
+
+Writing the config file to disk:
+
+<CodeSnippet language="typescript" code={cdkApp} marker="write-config" />
+
+## The Job Manager ECS Service
+
+The Job Manager service needs:
+
+1. **The Reduction Docker image**
+
+   A Docker image containing the Reduction binary. Tasks run the `reduction job`
+   command.
+
+1. **The job.config file**
+
+   The Job Manager requires the job.config file and any values only known at deploy
+   time to resolve configuration parameters. In this case, we provide a
+   Kinesis stream ARN, a working storage path, and the number of workers in the
+   cluster as environment variables to the Job service.
+
+1. **A well-known network address**
+
+   When the Reduction cluster boots, workers register with the Job Manager. To
+   make the Job Manager available on the network, we'll use Service Connect to
+   give it a well-known endpoint.
+
+1. **Write access to an S3 Bucket**
+
+   The job needs write access to a storage location to save and restore checkpoints.
+
+1. **Network access to communicate with workers**
+
+   We use a shared security group to allow the Job Manager and Worker nodes to
+   communicate with each other.
+
+<details>
+  <summary>Job Manager Service</summary>
+  <CodeSnippet language="typescript" code={cdkJobManagerService} />
+</details>
+
+## The Worker ECS Service
+
+The `WorkerService` runs instances of Reduction Workers. This service needs:
+
+1. **The Reduction Docker image**
+
+   A Docker image containing the Reduction binary. Tasks run the
+   `reduction worker` command.
+
+1. **The Job Manager endpoint**
+
+   Workers use the Job Manager endpoint to register when they boot.
+
+1. **Network access to communicate with the Job Manager and the Handler**
+
+   The workers share a security group with the Job Manager, and the
+   `WorkerService` construct implements `ec2.IConnectable` to configure access
+   to the Handler. `WorkerService` is passed a `jobManagerEndpoint` and a
+   `handlerEndpoint` to call.
+
+1. **Access read from the job source**
+
+   `WorkerService` implements `iam.IGrantable` so that we can grant access to
+   read the Kinesis stream.
+
+<details>
+  <summary>Worker Service</summary>
+  <CodeSnippet language="typescript" code={cdkWorkerService} />
+</details>
+
+## The Handler Service
+
+The Handler service runs your job code that the Reduction workers call. This
+could be an AWS Lambda with a function URL, a service behind a load balancer, or
+any compute capable of servicing HTTP requests.
+
+This Handler service needs:
+
+1. **A Docker image with your handler code**
+
+   Create a Dockerfile with that runs your handler executable.
+
+2. **A well-known network address**
+
+   The service runs on an ECS cluster configured with a namespace for Service
+   Connect. The `HandlerService` construct exposes an `endpoint` address for the
+   Workers to call which routes calls to `HandlerService` tasks.
+
+<details>
+  <summary>Handler Service</summary>
+  <CodeSnippet language="typescript" code={cdkHandlerService} />
+</details>
+
+## Reduction Stack - Connecting the Constructs
+
+The `ReductionStack` is the deployed CloudFormation stack that composes our
+three services and creates our data dependencies (S3 Bucket, Kinesis Stream).
+
+This stack creates:
+
+- An S3 bucket that Reduction uses for persistent storage.
+- A Kinesis stream used as a source input for a stream of words to count.
+- The ECS cluster to deploy the services into.
+- The shared security group for the Reduction Job Manager and Worker services.
+- A custom resource that puts words on the Kinesis stream after deploying so
+  that we can see the job process Kinesis records.
+
+<details>
+  <summary>Reduction Stack</summary>
+  <CodeSnippet language="typescript" code={cdkReductionStack} />
+</details>
+
+## Deploying the Stack
+
+To deploy this stack make sure you are in the `cdk` directory and run:
+
+```
+bun cdk deploy
+```
+
+This example has a TypeScript script for sending records to the source Kinesis
+stream.
+
+<details>
+  <summary>`scripts/send-records.ts`</summary>
+  <CodeSnippet language="typescript" code={sendRecordsScript} />
+</details>
+
+You can also use the aws cli to send some records:
+
+```shell
+aws kinesis put-record \
+  --stream-name WordCountStream \
+  --partition-key "1" \
+  --cli-binary-format raw-in-base64-out \
+  --data "here are some words for our job to process"
+```
+
+Then you can read the log events from the `Worker` log group to see the results:
+
+```shell-session
+> aws logs tail Worker
+2025-04-10T17:34:47.563000+00:00 Worker/Container/ede9438b6cd7458baffef42edaea8990 flake: 3
+2025-04-10T17:34:47.563000+00:00 Worker/Container/ede9438b6cd7458baffef42edaea8990 keep: 3
+2025-04-10T17:34:47.563000+00:00 Worker/Container/ede9438b6cd7458baffef42edaea8990 go: 5
+2025-04-10T17:34:47.563000+00:00 Worker/Container/ede9438b6cd7458baffef42edaea8990 village: 3
+2025-04-10T17:34:47.563000+00:00 Worker/Container/ede9438b6cd7458baffef42edaea8990 my: 3
+2025-04-10T17:34:47.563000+00:00 Worker/Container/ede9438b6cd7458baffef42edaea8990 there: 3
+2025-04-10T17:34:47.563000+00:00 Worker/Container/ede9438b6cd7458baffef42edaea8990 only: 3
+2025-04-10T17:34:47.563000+00:00 Worker/Container/ede9438b6cd7458baffef42edaea8990 sweep: 3
+2025-04-10T17:34:47.563000+00:00 Worker/Container/ede9438b6cd7458baffef42edaea8990 but: 3
+```
+
+When you're finished with your stack you can run `destroy` to remove all of the
+resources.
+
+```
+bun cdk destroy
+```

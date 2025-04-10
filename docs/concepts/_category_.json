@@ -1,9 +1,5 @@
 {
     "label": "Concepts",
     "position": 3,
-    "collapsed": false,
-    "link": {
-      "type": "generated-index",
-      "description": "Learn Reduction by example. This section provides recipes and tutorials for common use cases."
-    }
+    "collapsed": false
   }

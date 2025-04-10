@@ -1,9 +1,10 @@
+import assert from 'assert';
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecr_assets from 'aws-cdk-lib/aws-ecr-assets';
+import * as ecs from 'aws-cdk-lib/aws-ecs';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
-import assert from 'assert';
 
 export interface HandlerServiceProps {
   /**
@@ -40,7 +41,7 @@ export class HandlerService extends Construct implements ec2.IConnectable {
   /**
    * Implements IConnectable for security group access control
    */
-  public connections: ec2.Connections;
+  public readonly connections: ec2.Connections;
 
   constructor(scope: Construct, id: string, props: HandlerServiceProps) {
     super(scope, id);
@@ -56,8 +57,14 @@ export class HandlerService extends Construct implements ec2.IConnectable {
 
     taskDefinition.addContainer('Container', {
       image: ecs.ContainerImage.fromDockerImageAsset(props.handlerImage),
-      logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'handler' }),
       portMappings: [{ containerPort: handlerPort, name: 'handler' }],
+      logging: ecs.LogDriver.awsLogs({
+        streamPrefix: 'Handler',
+        logGroup: new logs.LogGroup(this, 'LogGroup', {
+          logGroupName: 'Handler',
+          retention: logs.RetentionDays.ONE_DAY,
+        }),
+      }),
       command: ['start'],
       healthCheck: {
         command: ['CMD-SHELL', `curl -f http://[::]:${handlerPort}/health || exit 1`],

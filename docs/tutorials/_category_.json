@@ -1,9 +1,5 @@
 {
   "label": "Tutorial",
   "position": 1,
-  "collapsed": false,
-  "link": {
-    "type": "generated-index",
-    "description": "Learn Reduction by example."
-  }
+  "collapsed": false
 }

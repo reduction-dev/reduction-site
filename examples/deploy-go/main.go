@@ -33,7 +33,8 @@ func KeyEvent(ctx context.Context, eventData *kinesis.Record) ([]rxn.KeyedEvent,
 		}
 
 		keyedEvents = append(keyedEvents, rxn.KeyedEvent{
-			Key: []byte(word),
+			Key:       []byte(word),
+			Timestamp: eventData.Timestamp,
 		})
 	}
 

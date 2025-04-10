@@ -4,6 +4,7 @@ import * as ecr_assets from 'aws-cdk-lib/aws-ecr-assets';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as kinesis from 'aws-cdk-lib/aws-kinesis';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import * as s3_assets from 'aws-cdk-lib/aws-s3-assets';
 import { Construct } from 'constructs';
 
@@ -14,14 +15,14 @@ export interface JobManagerServiceProps {
   cluster: ecs.ICluster;
 
   /**
-   * S3 bucket for checkpoints
-   */
-  bucket: s3.IBucket;
-
-  /**
    * The Docker image asset for the Reduction
    */
   reductionImage: ecr_assets.DockerImageAsset;
+
+  /**
+   * S3 bucket for checkpoints
+   */
+  bucket: s3.IBucket;
 
   /**
    * The job configuation S3 asset
@@ -57,8 +58,7 @@ export class JobManagerService extends Construct implements ec2.IConnectable {
   constructor(scope: Construct, id: string, props: JobManagerServiceProps) {
     super(scope, id);
 
-    // Create job manager task definition
-    const taskDefinition = new ecs.FargateTaskDefinition(this, 'JobManagerTask', {
+    const taskDefinition = new ecs.FargateTaskDefinition(this, 'Task', {
       runtimePlatform: {
         operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
         cpuArchitecture: ecs.CpuArchitecture.ARM64,
@@ -68,10 +68,16 @@ export class JobManagerService extends Construct implements ec2.IConnectable {
     props.jobConfigAsset.grantRead(taskDefinition.taskRole);
     props.sourceStream.grantRead(taskDefinition.taskRole);
 
-    taskDefinition.addContainer('JobManagerContainer', {
+    taskDefinition.addContainer('Container', {
       image: ecs.ContainerImage.fromDockerImageAsset(props.reductionImage),
-      logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'job-manager' }),
       portMappings: [{ containerPort: jobRpcPort, name: 'job-rpc' }],
+      logging: ecs.LogDriver.awsLogs({
+        streamPrefix: 'JobManager',
+        logGroup: new logs.LogGroup(this, 'LogGroup', {
+          logGroupName: 'JobManager',
+          retention: logs.RetentionDays.ONE_DAY,
+        }),
+      }),
       command: ['job', props.jobConfigAsset.s3ObjectUrl],
       environment: {
         REDUCTION_PARAM_STORAGE_PATH: props.bucket.s3UrlForObject("/working-storage"),

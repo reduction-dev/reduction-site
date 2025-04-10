@@ -25,3 +25,7 @@ yarn-error.log*
 
 # Review output for LLMs to read
 /review
+
+# Ignore copilot files that are changing a lot
+.github/prompts
+.github/copilot-instructions.md

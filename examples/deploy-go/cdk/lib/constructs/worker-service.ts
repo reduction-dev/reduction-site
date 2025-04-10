@@ -2,6 +2,7 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecr_assets from 'aws-cdk-lib/aws-ecr-assets';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 
 export interface WorkerServiceProps {
@@ -40,15 +41,14 @@ export interface WorkerServiceProps {
  * An ECS Worker Service
  */
 export class WorkerService extends Construct implements ec2.IConnectable, iam.IGrantable {
-  public readonly connections: ec2.Connections;
+    public readonly connections: ec2.Connections;
   public readonly service: ecs.FargateService;
   public readonly grantPrincipal: iam.IPrincipal;
 
   constructor(scope: Construct, id: string, props: WorkerServiceProps) {
     super(scope, id);
 
-    // Create worker task definition
-    const taskDefinition = new ecs.FargateTaskDefinition(this, 'WorkerTask', {
+    const taskDefinition = new ecs.FargateTaskDefinition(this, 'Task', {
       memoryLimitMiB: 512,
       cpu: 256,
       runtimePlatform: {
@@ -57,9 +57,15 @@ export class WorkerService extends Construct implements ec2.IConnectable, iam.IG
       },
     });
 
-    taskDefinition.addContainer('WorkerContainer', {
+    taskDefinition.addContainer('Container', {
       image: ecs.ContainerImage.fromDockerImageAsset(props.reductionImage),
-      logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'worker' }),
+      logging: ecs.LogDriver.awsLogs({
+        streamPrefix: 'Worker',
+        logGroup: new logs.LogGroup(this, 'LogGroup', {
+          logGroupName: 'Worker',
+          retention: logs.RetentionDays.ONE_DAY,
+        }),
+      }),
       command: ['worker',
         '--job-addr', props.jobManagerEndpoint,
         '--handler-addr', props.handlerEndpoint],
@@ -70,14 +76,14 @@ export class WorkerService extends Construct implements ec2.IConnectable, iam.IG
       securityGroups: [props.securityGroup],
       taskDefinition,
       desiredCount: props.workerCount,
-      minHealthyPercent: 0,
-      enableExecuteCommand: true,
-      assignPublicIp: true,
-      vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
       capacityProviderStrategies: [{
         capacityProvider: 'FARGATE_SPOT',
         weight: 1,
       }],
+      enableExecuteCommand: true,
+      minHealthyPercent: 0,
+      assignPublicIp: true,
+      vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
       serviceConnectConfiguration: {},
     });
     this.connections = this.service.connections;

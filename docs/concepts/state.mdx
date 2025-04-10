@@ -1,14 +1,15 @@
 # State (DKV)
 
-Reduction includes an embedded Log Structured Merge Tree (LSM) database called
-DKV (Distributed Key Value). Whenever you read or write state in a Reduction job
-you're using DKV's operations to query and update an instance of DKV. State
-records defined by Reduction's State Specs and timers are stored in DKV.
+DKV (Distributed Key Value) is Reduction's embedded Log Structured Merge Tree
+(LSM) database.  It provides state management for Reduction jobs through a
+storage engine designed specifically for cloud-native stream processing.
 
-This document walks through the design of DKV which uses concepts common in many
-LSM databases. However DKV is different from other LSM databases because it is
-purpose-built for Reduction's distributed checkpointing mechanism and it uses
-object storage (like S3) for persistence.
+## Key Concepts
+
+- DKV stores state records and timers defined by Reduction's State Specs
+- Uses object storage (like S3) for persistence
+- Optimized for Reduction's distributed checkpointing mechanism
+- Provides efficient read/write operations through tiered storage
 
 ## The Write Ahead Log
 

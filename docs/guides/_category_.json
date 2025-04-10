@@ -1,9 +1,5 @@
 {
     "label": "Guides",
     "position": 3,
-    "collapsed": false,
-    "link": {
-      "type": "generated-index",
-      "description": "This section provides recipes and tutorials for common use cases."
-    }
+    "collapsed": false
   }
