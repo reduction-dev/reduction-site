@@ -6,7 +6,7 @@ title: Getting Started
 import quickStartGo from '!!raw-loader!@site/examples/quick-start-go/main.go';
 import quickStartTS from '!!raw-loader!@site/examples/quick-start-ts/index.ts';
 import { DownloadLinks } from '@site/src/components/DownloadLinks';
-import { currentVersion } from '@site/src/constants';
+import { REDUCTION_VERSION } from '@site/src/config/versions';
 import CodeBlock from '@theme/CodeBlock';
 import TabItem from '@theme/TabItem';
 import Tabs from '@theme/Tabs';
@@ -26,10 +26,10 @@ brew install reduction-dev/tap/reduction
 Or downloaded and run with one of these pre-built binaries:
 
 <ul>
-   <DownloadLinks version={currentVersion}>
+   <DownloadLinks version={REDUCTION_VERSION}>
       {({ key, url, displayName }) => (
          <li key={key}>
-            <a href={url}>{`${currentVersion} - ${displayName}`}</a>
+            <a href={url}>{`${REDUCTION_VERSION} - ${displayName}`}</a>
          </li>
       )}
    </DownloadLinks>
@@ -39,7 +39,7 @@ Make sure you have `reduction` in your path:
 
 <CodeBlock language="shell-session">
 {`$ reduction --version
-reduction version ${currentVersion}`}
+reduction version ${REDUCTION_VERSION}`}
 </CodeBlock>
 
 ## Setup
