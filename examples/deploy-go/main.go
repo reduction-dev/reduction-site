@@ -66,7 +66,7 @@ func main() {
 		WorkerCount:            topology.IntParam("WORKER_COUNT"),
 	}
 
-	// Create a source that reads from stdin
+	// Create a source that reads from kinesis
 	source := kinesis.NewSource(job, "Source", &kinesis.SourceParams{
 		StreamARN: topology.StringParam("KINESIS_STREAM_ARN"),
 		KeyEvent:  KeyEvent,
